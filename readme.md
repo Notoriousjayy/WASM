@@ -1,4 +1,3 @@
-````markdown
 # testProject
 
 A minimal C/C++ scaffold using CMake, supporting both native and WebAssembly (WASM) builds with WebGL2 rendering. Ideal for developers looking to prototype graphics apps in C/C++ and run them either as a native executable or in the browser via Emscripten.
@@ -55,7 +54,6 @@ After building the WASM target, run:
 ```bash
 ./build_and_run.sh
 ```
-````
 
 Then open your browser at `http://localhost:8000`.
 
