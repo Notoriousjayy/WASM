@@ -1,6 +1,10 @@
+================================================
+FILE: readme.md
+================================================
+
 # testProject
 
-A minimal C project scaffolded with CMake, supporting both native and WebAssembly (WASM) builds. Includes a helper script (`build_and_run.sh`) to configure, build, and either run the native executable or serve the WASM build in your browser.
+A minimal C/C++ project scaffolded with CMake, supporting both native and WebAssembly (WASM) builds. Includes a helper script (`build_and_run.sh`) to configure, build, and either run the native executable or serve the WASM build in your browser, now with WebGL2 rendering support.
 
 ---
 
@@ -9,40 +13,36 @@ A minimal C project scaffolded with CMake, supporting both native and WebAssembl
 1. [Features](#features)
 2. [Prerequisites](#prerequisites)
 3. [Getting Started](#getting-started)
-   - [Clone the Repository](#clone-the-repository)
-   - [Directory Structure](#directory-structure)
 4. [Building & Running](#building--running)
-   - [Using `build_and_run.sh`](#using-build_and_runsh)
-   - [Manual CMake Build](#manual-cmake-build)
 5. [Script Options](#script-options)
-6. [WebAssembly Build Notes](#webassembly-build-notes)
-7. [License](#license)
+6. [WebAssembly + WebGL Build Notes](#webassembly--webgl-build-notes)
+7. [Project Structure](#project-structure)
+8. [License](#license)
 
 ---
 
 ## Features
 
 - **Native Build** via CMake (+ Ninja or Make).
-- **WebAssembly Build** via Emscripten toolchain.
-- Auto-generates a simple `index.html` for WASM builds.
-- Serves WASM build on `http://localhost:8000`, with automatic browser launch and port-conflict handling.
+- **WebAssembly Build** via Emscripten, with WebGL2 context creation.
+- Auto-generates a simple `index.html` for WASM builds (with `<canvas>`).
+- Simple C/C++ rendering module (`render.[ch]`) that clears the screen each frame.
+- Serves WASM build on `http://localhost:8000`, with auto-browser launch and port-conflict handling.
 
 ---
 
 ## Prerequisites
 
-- **Bash** (on Linux, macOS, or WSL)
+- **Bash** (Linux, macOS, or WSL)
 - **CMake** ≥ 3.0
-- **Ninja** _or_ **Make** (for the build system)
+- **Ninja** _or_ **Make** (build system)
 - **Python 3** (for serving WASM builds)
-- **lsof** (optional; used to check/kill processes on port 8000)
-- **Emscripten SDK** (for WASM builds)
+- **lsof** (optional; for port checks)
+- **Emscripten SDK** (with OpenGL ES / WebGL support enabled)
 
 ---
 
 ## Getting Started
-
-### Clone the Repository
 
 ```bash
 git clone https://your.repo.url/testProject.git

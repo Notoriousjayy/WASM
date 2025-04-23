@@ -153,6 +153,30 @@ src/main.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/testProject.dir/build.make CMakeFiles/testProject.dir/src/main.c.s
 .PHONY : src/main.c.s
 
+src/render.o: src/render.c.o
+.PHONY : src/render.o
+
+# target to build an object file
+src/render.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/testProject.dir/build.make CMakeFiles/testProject.dir/src/render.c.o
+.PHONY : src/render.c.o
+
+src/render.i: src/render.c.i
+.PHONY : src/render.i
+
+# target to preprocess a source file
+src/render.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/testProject.dir/build.make CMakeFiles/testProject.dir/src/render.c.i
+.PHONY : src/render.c.i
+
+src/render.s: src/render.c.s
+.PHONY : src/render.s
+
+# target to generate assembly for a file
+src/render.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/testProject.dir/build.make CMakeFiles/testProject.dir/src/render.c.s
+.PHONY : src/render.c.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -165,6 +189,9 @@ help:
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
+	@echo "... src/render.o"
+	@echo "... src/render.i"
+	@echo "... src/render.s"
 .PHONY : help
 
 

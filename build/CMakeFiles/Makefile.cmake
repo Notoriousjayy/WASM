@@ -10,8 +10,10 @@ set(CMAKE_MAKEFILE_DEPENDS
   "/home/jordan/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake"
   "/home/jordan/testProject/CMakeLists.txt"
   "CMakeFiles/3.25.1/CMakeCCompiler.cmake"
+  "CMakeFiles/3.25.1/CMakeCXXCompiler.cmake"
   "CMakeFiles/3.25.1/CMakeSystem.cmake"
   "/usr/share/cmake-3.25/Modules/CMakeCInformation.cmake"
+  "/usr/share/cmake-3.25/Modules/CMakeCXXInformation.cmake"
   "/usr/share/cmake-3.25/Modules/CMakeCommonLanguageInclude.cmake"
   "/usr/share/cmake-3.25/Modules/CMakeGenericSystem.cmake"
   "/usr/share/cmake-3.25/Modules/CMakeInitializeConfigs.cmake"
@@ -20,6 +22,7 @@ set(CMAKE_MAKEFILE_DEPENDS
   "/usr/share/cmake-3.25/Modules/CMakeSystemSpecificInitialize.cmake"
   "/usr/share/cmake-3.25/Modules/Compiler/CMakeCommonCompilerMacros.cmake"
   "/usr/share/cmake-3.25/Modules/Compiler/Clang-C.cmake"
+  "/usr/share/cmake-3.25/Modules/Compiler/Clang-CXX.cmake"
   "/usr/share/cmake-3.25/Modules/Compiler/Clang.cmake"
   "/usr/share/cmake-3.25/Modules/Compiler/GNU.cmake"
   )

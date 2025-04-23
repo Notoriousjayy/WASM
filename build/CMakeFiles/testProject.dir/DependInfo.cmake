@@ -9,6 +9,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/jordan/testProject/src/main.c" "CMakeFiles/testProject.dir/src/main.c.o" "gcc" "CMakeFiles/testProject.dir/src/main.c.o.d"
+  "/home/jordan/testProject/src/render.c" "CMakeFiles/testProject.dir/src/render.c.o" "gcc" "CMakeFiles/testProject.dir/src/render.c.o.d"
   )
 
 # Targets to which this target links.

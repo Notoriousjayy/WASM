@@ -16,8 +16,11 @@ CMakeFiles/testProject.dir/src/main.c.o: /home/jordan/testProject/src/main.c \
   /home/jordan/emsdk/upstream/emscripten/cache/sysroot/include/stdint.h \
   /home/jordan/emsdk/upstream/emscripten/cache/sysroot/include/bits/alltypes.h \
   /home/jordan/emsdk/upstream/emscripten/cache/sysroot/include/bits/stdint.h \
-  /home/jordan/emsdk/upstream/emscripten/cache/sysroot/include/features.h
+  /home/jordan/emsdk/upstream/emscripten/cache/sysroot/include/features.h \
+  /home/jordan/testProject/src/render.h
 
+
+/home/jordan/testProject/src/render.h:
 
 /home/jordan/emsdk/upstream/emscripten/cache/sysroot/include/bits/stdint.h:
 

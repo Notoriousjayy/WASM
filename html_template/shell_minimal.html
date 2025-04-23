@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>testProject</title>
+  </head>
+  <body>
+    <h1>testProject</h1>
+
+    <!-- your custom UI -->
+    <button id="my-button">Run myFunction</button>
+
+    <!-- Emscripten injects its generated <script> here -->
+    {{{ SCRIPT }}}
+
+    <script type="text/javascript">
+      // once Module is ready, wire up the button
+      Module.onRuntimeInitialized = () => {
+        document.getElementById("my-button").addEventListener("click", () => {
+          console.log("Calling myFunction…");
+          Module.ccall(
+            "myFunction", // exported C function
+            null, // return type
+            [], // arg types
+            [] // args
+          );
+        });
+      };
+    </script>
+  </body>
+</html>

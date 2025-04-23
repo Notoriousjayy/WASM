@@ -81,12 +81,12 @@ clean: CMakeFiles/testProject.dir/clean
 CMakeFiles/testProject.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/testProject.dir/build.make CMakeFiles/testProject.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/testProject.dir/build.make CMakeFiles/testProject.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/jordan/testProject/build/CMakeFiles --progress-num=1,2 "Built target testProject"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/jordan/testProject/build/CMakeFiles --progress-num=1,2,3 "Built target testProject"
 .PHONY : CMakeFiles/testProject.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/testProject.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/jordan/testProject/build/CMakeFiles 2
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jordan/testProject/build/CMakeFiles 3
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/testProject.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/jordan/testProject/build/CMakeFiles 0
 .PHONY : CMakeFiles/testProject.dir/rule
