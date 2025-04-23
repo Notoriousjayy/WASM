@@ -1,3 +1,0 @@
-/home/jordan/testProject/build/CMakeFiles/testProject.dir
-/home/jordan/testProject/build/CMakeFiles/edit_cache.dir
-/home/jordan/testProject/build/CMakeFiles/rebuild_cache.dir
