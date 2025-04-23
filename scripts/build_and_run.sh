@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# -----------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 # build_and_run.sh
 #   Configure, build and run a CMake project (native or WebAssembly).
 #
@@ -9,7 +9,12 @@ set -euo pipefail
 #   --watch          : build once, then
 #                        • start live-server on $BUILD_DIR (with browser open)
 #                        • watch src/ + html_template/ to rebuild on save
-# -----------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
+# — Ensure we’re in the project root (where CMakeLists.txt lives) —
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_ROOT"
 
 # — Defaults & argument parsing —
 BUILD_DIR="build"
@@ -118,7 +123,6 @@ HTML
     fi
 
     echo "🌍 Starting live-server on '$BUILD_DIR' (port $PORT)…"
-    # always let live-server manage reload, but we still manually open below
     live-server "$BUILD_DIR" --port=$PORT --quiet &
     LIVESERVER_PID=$!
 
