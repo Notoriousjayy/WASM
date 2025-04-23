@@ -7,7 +7,7 @@ set -euo pipefail
 #
 #   --no-serve       : just build (no HTTP server / browser open)
 #   --watch          : build once, then
-#                        • start live-server on $BUILD_DIR
+#                        • start live-server on $BUILD_DIR (with browser open)
 #                        • watch src/ + html_template/ to rebuild on save
 # -----------------------------------------------------------------------------
 
@@ -32,7 +32,13 @@ while [[ $# -gt 0 ]]; do
 done
 EXTRA_ARGS=("$@")
 
-# — Step 1: Pick a CMake generator —
+# — Detect WSL for browser opening —
+WSL=0
+if grep -qi microsoft /proc/version &>/dev/null; then
+  WSL=1
+fi
+
+# — Step 1: Pick a native generator (if we fall back) —
 if command -v ninja &>/dev/null; then
   GENERATOR_ARGS=(-G "Ninja")
 elif command -v make &>/dev/null; then
@@ -42,18 +48,31 @@ else
   exit 1
 fi
 
-# — Step 2: Configure & build —
+# — Step 2: Detect Emscripten vs native toolchain —
+if command -v emcmake &>/dev/null && command -v emmake &>/dev/null; then
+  echo "🔧 Detected Emscripten SDK (using emcmake/emmake)"
+  CMAKE_CMD=(emcmake cmake)
+  BUILD_CMD=(emmake make -C "$BUILD_DIR")
+else
+  echo "🔧 Using native CMake"
+  CMAKE_CMD=(cmake "${GENERATOR_ARGS[@]}")
+  BUILD_CMD=(cmake --build "$BUILD_DIR" --config "$BUILD_TYPE")
+fi
+
+# — Step 3: Configure & build —
 echo "⚙️  Configuring (${BUILD_TYPE}) in '$BUILD_DIR'..."
 mkdir -p "$BUILD_DIR"
-cmake -S . -B "$BUILD_DIR" "${GENERATOR_ARGS[@]}" -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
-echo "🔨 Building..."
-cmake --build "$BUILD_DIR" --config "$BUILD_TYPE"
+"${CMAKE_CMD[@]}" -S . -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
 
-# — Step 3: Locate outputs & HTML shell —
+echo "🔨 Building..."
+"${BUILD_CMD[@]}"
+
+# — Step 4: Locate outputs & HTML shell —
 NATIVE_EXE="$BUILD_DIR/$PROJECT_NAME"
 WASM_JS="$BUILD_DIR/$PROJECT_NAME.js"
 INDEX_HTML="$BUILD_DIR/index.html"
 PORT=8000
+URL="http://localhost:$PORT"
 
 # — Native path: just run it —
 if [[ -x "$NATIVE_EXE" ]]; then
@@ -93,28 +112,37 @@ HTML
 
   # — WATCH MODE: live-reload + rebuild on save —
   if [[ $WATCH -eq 1 ]]; then
-    # require live-server
     if ! command -v live-server &>/dev/null; then
       echo "🔴 live-server not found. Install with: npm install -g live-server"
       exit 1
     fi
 
-    echo "🌍 Starting live-server on '$BUILD_DIR' (port $PORT)..."
+    echo "🌍 Starting live-server on '$BUILD_DIR' (port $PORT)…"
+    # always let live-server manage reload, but we still manually open below
     live-server "$BUILD_DIR" --port=$PORT --quiet &
     LIVESERVER_PID=$!
 
+    # open once
+    if (( WSL )); then
+      cmd.exe /C start "" "$URL"
+    elif command -v xdg-open &>/dev/null; then
+      xdg-open "$URL" >/dev/null 2>&1 || true
+    elif command -v open &>/dev/null; then
+      open "$URL" >/dev/null 2>&1 || true
+    fi
+
     trap 'echo; echo "🛑 Stopping live-server..."; kill $LIVESERVER_PID; exit 0' SIGINT
 
-    echo "🔄 Watching for changes in src/ and html_template/ to rebuild..."
+    echo "🔄 Watching for changes in src/ and html_template/ to rebuild…"
     SCRIPT_PATH="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
 
     if command -v entr &>/dev/null; then
-      find src html_template -type f \
-        | entr -r bash -c "\"$SCRIPT_PATH\" --build-dir \"$BUILD_DIR\" --build-type \"$BUILD_TYPE\" --project-name \"$PROJECT_NAME\" --no-serve"
+      find src html_template -type f 2>/dev/null | \
+        entr -r bash -c "\"$SCRIPT_PATH\" --build-dir \"$BUILD_DIR\" --build-type \"$BUILD_TYPE\" --project-name \"$PROJECT_NAME\" --watch"
     elif command -v inotifywait &>/dev/null; then
-      while inotifywait -q -r -e close_write src html_template; do
-        echo "🔄 Change detected → rebuilding..."
-        bash "$SCRIPT_PATH" --build-dir "$BUILD_DIR" --build-type "$BUILD_TYPE" --project-name "$PROJECT_NAME" --no-serve
+      while inotifywait -q -r -e close_write src html_template 2>/dev/null; do
+        echo "🔄 Change detected → rebuilding…"
+        bash "$SCRIPT_PATH" --build-dir "$BUILD_DIR" --build-type "$BUILD_TYPE" --project-name "$PROJECT_NAME" --watch
       done
     else
       echo "🔴 Neither 'entr' nor 'inotifywait' found; cannot watch files."
@@ -133,13 +161,22 @@ HTML
   fi
 
   # — DEFAULT SERVE: prefer live-server, else http-server, else error —
-  echo "🚀 Serving '$BUILD_DIR' on port $PORT..."
+  echo "🚀 Serving '$BUILD_DIR' on port $PORT and opening browser…"
 
   if command -v live-server &>/dev/null; then
     live-server "$BUILD_DIR" --port=$PORT --open=index.html
   elif command -v http-server &>/dev/null; then
     http-server "$BUILD_DIR" -p $PORT &
     SERVER_PID=$!
+
+    # manual open (in case --open isn’t supported or on WSL)
+    if (( WSL )); then
+      cmd.exe /C start "" "$URL"
+    elif command -v xdg-open &>/dev/null; then
+      xdg-open "$URL" >/dev/null 2>&1 || true
+    elif command -v open &>/dev/null; then
+      open "$URL" >/dev/null 2>&1 || true
+    fi
 
     trap 'echo; echo "🛑 Shutting down http-server..."; kill $SERVER_PID; exit 0' SIGINT
     wait $SERVER_PID
