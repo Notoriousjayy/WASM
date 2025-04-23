@@ -1,26 +1,29 @@
-================================================ FILE: html_template/index.html
-================================================
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>@PROJECT_NAME@</title>
-    <style>
-      html,
-      body {
-        height: 100%;
-        margin: 0;
-        overflow: hidden;
-      }
-      canvas {
-        display: block;
-        width: 100%;
-        height: 100%;
-      }
-    </style>
+    <title>testProject</title>
   </head>
   <body>
-    <canvas id="canvas"></canvas>
-    <script src="@PROJECT_NAME@.js"></script>
+    <h1>testProject</h1>
+
+    <!-- 1) YOUR CANVAS: must match the selector you pass into your Module -->
+    <canvas id="canvas" width="800" height="600"></canvas>
+
+    <!-- 2) Pre-configure the Module global before loading the glue code -->
+    <script>
+      // if you stick with the default (non-MODULARIZE) build,
+      // Emscripten will look for a global `Module` object.
+      var Module = {
+        canvas: document.getElementById("canvas"),
+        onRuntimeInitialized: function () {
+          // optional: kick off your app, e.g. Module._main()
+          console.log("WASM runtime initialized");
+        },
+      };
+    </script>
+
+    <!-- 3) Load the generated JS (it will fetch testProject.wasm) -->
+    <script src="testProject.js"></script>
   </body>
 </html>
