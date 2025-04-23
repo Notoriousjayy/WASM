@@ -1,0 +1,1 @@
+/home/jordan/emsdk/upstream/emscripten/emcc -O3 -DNDEBUG @CMakeFiles/testProject.dir/objects1 -o testProject.js 
