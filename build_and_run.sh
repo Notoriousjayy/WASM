@@ -4,20 +4,27 @@ set -euo pipefail
 # -----------------------------------------------------------------------------
 # build_and_run.sh
 #   Configure, build and run a CMake project (native or WebAssembly).
-#   If a WebAssembly build is detected, copies/generates index.html (with canvas),
-#   serves it on localhost:8000, and opens it in your browser.
+#
+#   --no-serve       : just build (no HTTP server / browser open)
+#   --watch          : build once, then
+#                        • start live-server on $BUILD_DIR
+#                        • watch src/ + html_template/ to rebuild on save
 # -----------------------------------------------------------------------------
 
 # — Defaults & argument parsing —
 BUILD_DIR="build"
 BUILD_TYPE="Release"
 PROJECT_NAME="testProject"
+NO_SERVE=0
+WATCH=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --build-dir)    BUILD_DIR="$2"; shift 2 ;;
     --build-type)   BUILD_TYPE="$2"; shift 2 ;;
     --project-name) PROJECT_NAME="$2"; shift 2 ;;
+    --no-serve)     NO_SERVE=1; shift ;;
+    --watch)        WATCH=1; shift ;;
     --)             shift; break ;;
     -*) echo "Unknown option: $1"; exit 1 ;;
     *)  break ;;
@@ -25,7 +32,7 @@ while [[ $# -gt 0 ]]; do
 done
 EXTRA_ARGS=("$@")
 
-# — Step 1: Pick a generator —
+# — Step 1: Pick a CMake generator —
 if command -v ninja &>/dev/null; then
   GENERATOR_ARGS=(-G "Ninja")
 elif command -v make &>/dev/null; then
@@ -42,20 +49,22 @@ cmake -S . -B "$BUILD_DIR" "${GENERATOR_ARGS[@]}" -DCMAKE_BUILD_TYPE="$BUILD_TYP
 echo "🔨 Building..."
 cmake --build "$BUILD_DIR" --config "$BUILD_TYPE"
 
-# — Step 3: Decide native vs WASM —
+# — Step 3: Locate outputs & HTML shell —
 NATIVE_EXE="$BUILD_DIR/$PROJECT_NAME"
 WASM_JS="$BUILD_DIR/$PROJECT_NAME.js"
 INDEX_HTML="$BUILD_DIR/index.html"
 PORT=8000
 
+# — Native path: just run it —
 if [[ -x "$NATIVE_EXE" ]]; then
   echo "🚀 Running native executable: $PROJECT_NAME"
   exec "$NATIVE_EXE" "${EXTRA_ARGS[@]}"
+fi
 
-elif [[ -f "$WASM_JS" ]]; then
+# — WebAssembly path: generate or copy your HTML shell —
+if [[ -f "$WASM_JS" ]]; then
   echo "🌐 WebAssembly build detected."
 
-  # — Pick up or generate your HTML shell with <canvas> + Module pre-config —
   if [[ -f "html_template/index.html" ]]; then
     cp html_template/index.html "$INDEX_HTML"
     echo "📝 Copied custom HTML shell → $INDEX_HTML"
@@ -63,18 +72,11 @@ elif [[ -f "$WASM_JS" ]]; then
     cat > "$INDEX_HTML" <<HTML
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>${PROJECT_NAME}</title>
-</head>
+<head><meta charset="utf-8"><title>${PROJECT_NAME}</title></head>
 <body>
   <h1>${PROJECT_NAME}</h1>
-
-  <!-- Your canvas: must match Module.canvas below -->
   <canvas id="canvas" width="800" height="600"></canvas>
-
   <script>
-    // Pre-configure the Module so the glue code picks up your canvas
     var Module = {
       canvas: document.getElementById('canvas'),
       onRuntimeInitialized: function() {
@@ -82,7 +84,6 @@ elif [[ -f "$WASM_JS" ]]; then
       }
     };
   </script>
-
   <script src="${PROJECT_NAME}.js"></script>
 </body>
 </html>
@@ -90,46 +91,63 @@ HTML
     echo "📝 Generated default HTML shell → $INDEX_HTML"
   fi
 
-  # — Step 4: Check & free port if needed —
-  if command -v lsof &>/dev/null; then
-    USED_PIDS=$(lsof -i TCP:"$PORT" -sTCP:LISTEN -t || true)
-    if [[ -n "$USED_PIDS" ]]; then
-      echo "⚠️  Port $PORT in use by: $USED_PIDS"
-      read -rp "Kill them and continue? [y/N] " kill_confirm
-      if [[ "$kill_confirm" =~ ^[Yy]$ ]]; then
-        kill $USED_PIDS; sleep 1
-      else
-        echo "Aborted."; exit 1
-      fi
+  # — WATCH MODE: live-reload + rebuild on save —
+  if [[ $WATCH -eq 1 ]]; then
+    # require live-server
+    if ! command -v live-server &>/dev/null; then
+      echo "🔴 live-server not found. Install with: npm install -g live-server"
+      exit 1
     fi
-  else
-    echo "ℹ️  'lsof' not found—skipping port check."
+
+    echo "🌍 Starting live-server on '$BUILD_DIR' (port $PORT)..."
+    live-server "$BUILD_DIR" --port=$PORT --quiet &
+    LIVESERVER_PID=$!
+
+    trap 'echo; echo "🛑 Stopping live-server..."; kill $LIVESERVER_PID; exit 0' SIGINT
+
+    echo "🔄 Watching for changes in src/ and html_template/ to rebuild..."
+    SCRIPT_PATH="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+
+    if command -v entr &>/dev/null; then
+      find src html_template -type f \
+        | entr -r bash -c "\"$SCRIPT_PATH\" --build-dir \"$BUILD_DIR\" --build-type \"$BUILD_TYPE\" --project-name \"$PROJECT_NAME\" --no-serve"
+    elif command -v inotifywait &>/dev/null; then
+      while inotifywait -q -r -e close_write src html_template; do
+        echo "🔄 Change detected → rebuilding..."
+        bash "$SCRIPT_PATH" --build-dir "$BUILD_DIR" --build-type "$BUILD_TYPE" --project-name "$PROJECT_NAME" --no-serve
+      done
+    else
+      echo "🔴 Neither 'entr' nor 'inotifywait' found; cannot watch files."
+      kill $LIVESERVER_PID
+      exit 1
+    fi
+
+    wait $LIVESERVER_PID
+    exit 0
   fi
 
-  # — Step 5: Serve & open browser —
-  pushd "$BUILD_DIR" >/dev/null
-    python3 -m http.server "$PORT" &
+  # — NO-SERVE: finish after build/copy HTML —
+  if [[ $NO_SERVE -eq 1 ]]; then
+    echo "✅ Build complete (no-serve mode)."
+    exit 0
+  fi
+
+  # — DEFAULT SERVE: prefer live-server, else http-server, else error —
+  echo "🚀 Serving '$BUILD_DIR' on port $PORT..."
+
+  if command -v live-server &>/dev/null; then
+    live-server "$BUILD_DIR" --port=$PORT --open=index.html
+  elif command -v http-server &>/dev/null; then
+    http-server "$BUILD_DIR" -p $PORT &
     SERVER_PID=$!
-  popd >/dev/null
 
-  URL="http://localhost:${PORT}/index.html"
-  echo "🚀 Serving at: $URL"
-
-  if grep -qi microsoft /proc/version 2>/dev/null; then
-    # WSL
-    command -v explorer.exe &>/dev/null \
-      && explorer.exe "$URL" \
-      || (cd ~ && cmd.exe /C start "" "$URL")
-  elif command -v xdg-open &>/dev/null; then
-    xdg-open "$URL"
-  elif command -v open &>/dev/null; then
-    open "$URL"
+    trap 'echo; echo "🛑 Shutting down http-server..."; kill $SERVER_PID; exit 0' SIGINT
+    wait $SERVER_PID
   else
-    echo "👀 Please open in your browser: $URL"
+    echo "🔴 Neither live-server nor http-server found."
+    echo "   Install with: npm install -g live-server http-server"
+    exit 1
   fi
-
-  trap 'echo; echo "🛑 Shutting down server..."; kill $SERVER_PID; exit 0' SIGINT
-  wait $SERVER_PID
 
 else
   echo "❌ Built output not found."
