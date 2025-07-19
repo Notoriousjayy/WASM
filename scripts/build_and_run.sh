@@ -30,13 +30,13 @@ while [[ $# -gt 0 ]]; do
 done
 EXTRA_ARGS=("$@")
 
-# Detect WSL for browser opening
+# Detect WSL for browser-opening later
 WSL=0
 if grep -qi microsoft /proc/version &>/dev/null; then
   WSL=1
 fi
 
-# Pick a native generator (if no Emscripten)
+# Pick a native generator if Emscripten isn't present
 if command -v ninja &>/dev/null; then
   GENERATOR_ARGS=(-G "Ninja")
 elif command -v make &>/dev/null; then
@@ -46,7 +46,7 @@ else
   exit 1
 fi
 
-# Detect Emscripten vs native
+# Emscripten vs native
 if command -v emcmake &>/dev/null && command -v emmake &>/dev/null; then
   echo "🔧 Detected Emscripten SDK"
   CMAKE_CMD=(emcmake cmake)
@@ -64,24 +64,24 @@ mkdir -p "$BUILD_DIR"
 echo "🔨 Building..."
 "${BUILD_CMD[@]}"
 
-# Locate outputs
+# Paths for run / serve
 NATIVE_EXE="$BUILD_DIR/$PROJECT_NAME"
 WASM_JS="$BUILD_DIR/$PROJECT_NAME.js"
 INDEX_HTML="$BUILD_DIR/index.html"
 PORT=8000
 URL="http://localhost:$PORT"
 
-# Native run
+# If native binary exists, just run it
 if [[ -x "$NATIVE_EXE" ]]; then
   echo "🚀 Running native: $PROJECT_NAME"
   exec "$NATIVE_EXE" "${EXTRA_ARGS[@]}"
 fi
 
-# WebAssembly path
+# Otherwise, look for a Wasm build
 if [[ -f "$WASM_JS" ]]; then
   echo "🌐 WebAssembly build detected."
 
-  # Use the HTML CMake already generated
+  # Ensure an index.html
   if [[ -f "$INDEX_HTML" ]]; then
     echo "📝 Using CMake-generated HTML → $INDEX_HTML"
   else
@@ -113,13 +113,13 @@ HTML
 
   # Watch mode
   if [[ $WATCH -eq 1 ]]; then
-    command -v live-server &>/dev/null || { echo "Install live-server"; exit 1; }
+    command -v live-server &>/dev/null || { echo "❌ Install live-server to use --watch"; exit 1; }
     echo "🌍 live-serving with watch → $BUILD_DIR"
     live-server "$BUILD_DIR" --port=$PORT --quiet &
     P=$!
     (( WSL )) && cmd.exe /C start "" "$URL" || xdg-open "$URL" || open "$URL" || true
     trap "kill $P; exit" SIGINT
-    # file-watch rebuild loop omitted for brevity…
+    # (file-watch rebuild loop can go here if you like…)
     wait $P
     exit 0
   fi
@@ -130,22 +130,37 @@ HTML
     exit 0
   fi
 
-  # Default serve
+  # ―――――――――――――――――――――――――――――――――――
+  # Default serve (smart fallback chain)
   echo "🚀 Serving → $URL"
-  if command -v live-server &>/dev/null; then
-    live-server "$BUILD_DIR" --port=$PORT --open=index.html
-  elif command -v http-server &>/dev/null; then
+  if command -v live-server >/dev/null 2>&1; then
+    live-server "$BUILD_DIR" --port=$PORT --open=index.html &
+  elif command -v http-server >/dev/null 2>&1; then
     http-server "$BUILD_DIR" -p $PORT &
-    P=$!
-    (( WSL )) && cmd.exe /C start "" "$URL" || xdg-open "$URL" || open "$URL" || true
-    trap "kill $P; exit" SIGINT
-    wait $P
+  elif command -v emrun >/dev/null 2>&1; then
+    emrun --no_browser --port=$PORT "$INDEX_HTML" &
+  elif command -v python3 >/dev/null 2>&1; then
+    (cd "$BUILD_DIR" && python3 -m http.server $PORT) &
+  elif command -v python >/dev/null 2>&1; then
+    (cd "$BUILD_DIR" && python -m SimpleHTTPServer $PORT) &
   else
-    echo "🔴 Install live-server or http-server!"
+    echo "🔴 Please install one of: live-server, http-server (npm), or Python 3."
     exit 1
   fi
+  P=$!
+
+  # Open browser
+  if (( WSL )); then
+    cmd.exe /C start "" "$URL"
+  else
+    xdg-open "$URL" 2>/dev/null || open "$URL" 2>/dev/null || true
+  fi
+
+  trap "kill $P; exit" SIGINT
+  wait $P
+  exit 0
 
 else
-  echo "❌ No build output — looked for '$NATIVE_EXE' or '$WASM_JS'."
+  echo "❌ No build output found — looked for '$NATIVE_EXE' or '$WASM_JS'."
   exit 1
 fi
