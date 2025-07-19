@@ -27,29 +27,27 @@ target_include_directories(${PROJECT_NAME}
 
 # 4) Emscripten / WebAssembly tweaks
 if(CMAKE_C_COMPILER_ID STREQUAL "Emscripten")
-  # 4.a) emit an .html wrapper
+  # 4.a) Emit an .html wrapper
   set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".html")
 
-  # 4.b) point to our post-JS file (must exist at html_template/init_runtime.js)
+  # 4.b) Your post-JS hook
   set(POST_JS_FILE "${CMAKE_SOURCE_DIR}/html_template/init_runtime.js")
 
-  # 4.c) linker flags for WebGL2 + minimal runtime + JS interop + auto-init
+  # 4.c) Linker flags: WebGL2 + minimal runtime + raw + ccall/cwrap + custom shell
   target_link_options(${PROJECT_NAME} PRIVATE
-    "-s USE_WEBGL2=1"
-    "-s FULL_ES3=1"
-    "-s NO_EXIT_RUNTIME=1"
+    "SHELL:-sUSE_WEBGL2=1"
+    "SHELL:-sFULL_ES3=1"
+    "SHELL:-sNO_EXIT_RUNTIME=1"
 
-    # bring in ccall & cwrap helpers
-    "-s EXPORTED_RUNTIME_METHODS=['ccall','cwrap']"
+    # EXPORTED_RUNTIME_METHODS must come with NO space after -s
+    "SHELL:-sEXPORTED_RUNTIME_METHODS=['ccall','cwrap']"
 
-    # export your C functions so both raw and ccall work
-    "-s EXPORTED_FUNCTIONS=['_initWebGL','_startMainLoop','_main']"
+    # Export your C entry points (with leading underscores)
+    "SHELL:-sEXPORTED_FUNCTIONS=['_main','_initWebGL','_startMainLoop']"
 
-    # use your custom HTML shell
-    "--shell-file=${CMAKE_SOURCE_DIR}/html_template/index.html"
-
-    # append our runtime-init JS after the generated glue
-    "--post-js=${POST_JS_FILE}"
+    # Custom HTML shell + post-JS
+    "SHELL:--shell-file=${CMAKE_SOURCE_DIR}/html_template/index.html"
+    "SHELL:--post-js=${POST_JS_FILE}"
   )
 endif()
 
