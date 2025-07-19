@@ -1,15 +1,18 @@
 #ifndef RENDER_H
 #define RENDER_H
 
+#include <emscripten/emscripten.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// Initialize a WebGL2 context on the <canvas id="canvas"> element.
-// Returns 1 on success, 0 on failure.
+// Called once at startup to set up GL state & circle vertex buffer
+EMSCRIPTEN_KEEPALIVE
 int initWebGL(void);
 
-// Starts the render loop (clears the screen each frame).
+// Begins the main loop that continuously draws the circle
+EMSCRIPTEN_KEEPALIVE
 void startMainLoop(void);
 
 #ifdef __cplusplus
