@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>testProject (WASM)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    html, body { margin: 0; height: 100%; background: #111; }
+    #canvas { width: 100vw; height: 100vh; display: block; background: #000; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="800" height="600"></canvas>
+
+  <!-- Configure Module BEFORE the generated script is injected -->
+  <script>
+    var Module = {
+      canvas: (function () { return document.getElementById('canvas'); })(),
+      print: function (text) { console.log(text); },
+      printErr: function (text) { console.error(text); },
+      onRuntimeInitialized: function () {
+        try {
+          var ok = Module.ccall('initWebGL', 'number', [], []);
+          if (ok) {
+            Module.ccall('startMainLoop', 'void', [], []);
+          } else {
+            console.error('initWebGL failed');
+          }
+        } catch (e) {
+          console.error('Runtime init error:', e);
+        }
+      }
+    };
+  </script>
+
+  <!-- REQUIRED by Emscripten: this placeholder injects the generated JS -->
+  {{{ SCRIPT }}}
+</body>
+</html>

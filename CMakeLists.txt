@@ -1,56 +1,83 @@
-cmake_minimum_required(VERSION 3.15)
-project(testProject VERSION 1.0 LANGUAGES C CXX)
+cmake_minimum_required(VERSION 3.20)
+project(testProject C)
 
-# 1) C standards & default build type
-set(CMAKE_C_STANDARD    99)
-set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD  17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release CACHE STRING
-      "Choose the type of build (Debug or Release)" FORCE)
-endif()
+# --- Options ---------------------------------------------------------------
+option(BUILD_WASM_HTML "Emit an HTML shell for the WASM build (custom template if present)" ON)
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_EXTENSIONS OFF)
 
-# 2) Your sources
+# Dev server settings (override with -DSERVE_PORT=5173, etc.)
+set(SERVE_PORT "8000" CACHE STRING "Dev server port")
+set(SERVE_HOST "0.0.0.0" CACHE STRING "Dev server bind address")
+
+# --- Sources ---------------------------------------------------------------
 set(SOURCES
   src/main.c
-  src/render.c
+  src/module.c
 )
 
-# 3) Executable target
-add_executable(${PROJECT_NAME} ${SOURCES})
-target_include_directories(${PROJECT_NAME}
-  PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/include/testProject
-)
-
-# 4) Emscripten / WebAssembly tweaks
-if(CMAKE_C_COMPILER_ID STREQUAL "Emscripten")
-  # 4.a) Emit an .html wrapper
-  set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".html")
-
-  # 4.b) Your post-JS hook
-  set(POST_JS_FILE "${CMAKE_SOURCE_DIR}/html_template/init_runtime.js")
-
-  # 4.c) Linker flags: WebGL2 + minimal runtime + raw + ccall/cwrap + custom shell
-  target_link_options(${PROJECT_NAME} PRIVATE
-    "SHELL:-sUSE_WEBGL2=1"
-    "SHELL:-sFULL_ES3=1"
-    "SHELL:-sNO_EXIT_RUNTIME=1"
-
-    # EXPORTED_RUNTIME_METHODS must come with NO space after -s
-    "SHELL:-sEXPORTED_RUNTIME_METHODS=['ccall','cwrap']"
-
-    # Export your C entry points (with leading underscores)
-    "SHELL:-sEXPORTED_FUNCTIONS=['_main','_initWebGL','_startMainLoop']"
-
-    # Custom HTML shell + post-JS
-    "SHELL:--shell-file=${CMAKE_SOURCE_DIR}/html_template/index.html"
-    "SHELL:--post-js=${POST_JS_FILE}"
-  )
+# WebGL2 renderer is Emscripten-only
+if(EMSCRIPTEN OR CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  list(APPEND SOURCES src/render.c)
 endif()
 
-# 5) (optional) install rules, testing, etc.
-# install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)
-# enable_testing() && add_subdirectory(tests)
+add_executable(testProject ${SOURCES})
+
+target_include_directories(testProject PRIVATE
+  ${CMAKE_SOURCE_DIR}/include
+  ${CMAKE_SOURCE_DIR}/include/testProject
+)
+
+# --- Emscripten (WASM) configuration --------------------------------------
+if(EMSCRIPTEN OR CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+
+  # Linker flags and exported functions/runtime
+  target_link_options(testProject PRIVATE
+    "SHELL:-sUSE_WEBGL2=1"
+    "SHELL:-sMIN_WEBGL_VERSION=2"
+    "SHELL:-sMAX_WEBGL_VERSION=2"
+    "SHELL:-sALLOW_MEMORY_GROWTH=1"
+    "SHELL:-sEXPORTED_FUNCTIONS=['_main','_initWebGL','_startMainLoop','_myFunction']"
+    "SHELL:-sEXPORTED_RUNTIME_METHODS=['ccall','cwrap']"
+  )
+
+  # Emit index.html / index.js / index.wasm so the server root loads the app
+  set_target_properties(testProject PROPERTIES
+    SUFFIX ".html"
+    OUTPUT_NAME "index"
+  )
+
+  # Optional custom HTML shell / post-js (use default shell if missing)
+  if(BUILD_WASM_HTML)
+    if(EXISTS "${CMAKE_SOURCE_DIR}/html_template/index.html")
+      target_link_options(testProject PRIVATE
+        "SHELL:--shell-file=${CMAKE_SOURCE_DIR}/html_template/index.html"
+      )
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/html_template/init_runtime.js")
+      target_link_options(testProject PRIVATE
+        "SHELL:--post-js=${CMAKE_SOURCE_DIR}/html_template/init_runtime.js"
+      )
+    endif()
+  endif()
+
+  # "cmake --build ... --target serve" to host the output (no scripts/)
+  find_package(Python3 COMPONENTS Interpreter)
+  if(Python3_Interpreter_FOUND)
+    add_custom_target(serve
+      COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --cyan
+              "Serving ${CMAKE_CURRENT_BINARY_DIR} at http://${SERVE_HOST}:${SERVE_PORT}. Press Ctrl+C to stop."
+      COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_BINARY_DIR}
+              ${Python3_EXECUTABLE} -u -m http.server ${SERVE_PORT} --bind ${SERVE_HOST}
+      DEPENDS testProject
+      USES_TERMINAL
+      VERBATIM
+    )
+  endif()
+
+else()
+  # --- Native notes --------------------------------------------------------
+  # render.c is WebGL2 (browser) only. For native, add a render_native.c (GLFW/SDL)
+  # and append it to SOURCES when not building with Emscripten.
+  message(STATUS "Configuring native build (no WebGL2 renderer linked).")
+endif()

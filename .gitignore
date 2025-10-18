@@ -1,43 +1,97 @@
-# — Build artifacts —
+# ── Build trees (CMake/Ninja/CLion) ────────────────────────────────────────────
 /build/
+/build-*/
+/cmake-build-*/
+/out/
+/dist/
 
-# CMake-generated files
+# CMake state
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
 Makefile
 compile_commands.json
+CTestTestfile.cmake
+Testing/
+_install/
+install_manifest.txt
+CPackConfig.cmake
+CPackSourceConfig.cmake
+_CPack_Packages/
 
-# Ninja build system
+# Ninja
 build.ninja
 *.ninja
+.ninja_deps
+.ninja_log
 
-# Emscripten/WebAssembly outputs
-# (usually under build/, but catch in-source too)
-*.js
-*.wasm
-*.html
+# FetchContent / external deps (generated under build trees)
+/_deps/
+**/_deps/
 
-# Native binaries
+# ── Emscripten/WebAssembly build products (ONLY inside build dirs) ────────────
+build*/**/*.wasm
+build*/**/*.wasm.map
+build*/**/*.js
+build*/**/*.js.map
+build*/**/*.worker.js
+build*/**/*.data
+build*/**/*.html
+cmake-build-*/**/*.wasm
+cmake-build-*/**/*.js
+cmake-build-*/**/*.html
+
+# Keep your source templates tracked
+!/html_template/*.html
+!/html_template/*.js
+
+# ── Native binaries ───────────────────────────────────────────────────────────
 *.exe
 *.dll
 *.so
 *.dylib
+*.pdb
+*.dSYM/
 
-# — Node.js dependencies —
+# ── Coverage & debug ─────────────────────────────────────────────────────────
+*.gcno
+*.gcda
+*.gcov
+lcov.info
+
+# ── Node / web tooling ───────────────────────────────────────────────────────
 /node_modules/
-
-# — Logs —
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+.eslintcache
+.parcel-cache/
+.vite/
+.turbo/
+.cache/
+.rollup.cache/
+.swc/
+.webpack/
 
-# — IDEs and editors —
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+
+# ── IDEs / editors ───────────────────────────────────────────────────────────
 .vscode/
 .idea/
+*.iml
 *.swp
 *~
+
 # macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+
 # Windows
 Thumbs.db
+ehthumbs.db
+Desktop.ini

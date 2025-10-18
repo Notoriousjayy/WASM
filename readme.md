@@ -1,178 +1,203 @@
 # testProject
 
-A minimal C/C++ scaffold using CMake, supporting both native and WebAssembly (WASM) builds with WebGL2 rendering. Ideal for developers looking to prototype graphics apps in C/C++ and run them either as a native executable or in the browser via Emscripten.
+Minimal C/C++ scaffold built with **CMake**, targeting **WebAssembly (Emscripten + WebGL2)** and optionally native. It’s ideal for prototyping graphics code that runs in the browser, while keeping a clean, production-style CMake project.
 
-## Acknowledgements
+<p align="left">
+  <a href="https://opensource.org/licenses/MIT"><img alt="License" src="https://img.shields.io/badge/License-MIT-green.svg"></a>
+</p>
 
-- [Awesome Readme Templates](https://awesomeopensource.com/project/elangosundar/awesome-README-templates)
-- [Awesome README](https://github.com/matiassingers/awesome-readme)
-- [How to write a Good readme](https://bulldogjob.com/news/449-how-to-write-a-good-readme-for-your-github-project)
+---
+
+## Quick Start (WASM)
+
+### 0) Prereqs
+
+* **CMake ≥ 3.20**
+* **Python 3** (for the simple dev server)
+* **Emscripten SDK**
+
+  ```bash
+  git clone https://github.com/emscripten-core/emsdk.git ~/emsdk
+  cd ~/emsdk && ./emsdk install latest && ./emsdk activate latest
+  source ~/emsdk/emsdk_env.sh
+  ```
+* (Recommended) **Ninja**
+
+  ```bash
+  sudo apt-get update && sudo apt-get install -y ninja-build
+  ```
+
+### 1) Configure & build (using presets)
+
+```bash
+# Configure for WASM
+emcmake cmake --preset wasm-debug
+
+# Build
+cmake --build --preset wasm-debug
+```
+
+### 2) Serve locally (no external scripts)
+
+```bash
+# CMake target that runs: python3 -m http.server
+cmake --build --preset wasm-debug --target serve
+```
+
+Open **[http://localhost:8000/](http://localhost:8000/)**.
+The build emits **index.html / index.js / index.wasm** in the build directory, so your app loads at the server root.
+
+> **WSL tip:** the default server binds to `0.0.0.0`, so you can open the URL from Windows as well.
+
+---
+
+## What You Get
+
+* **CMake-only workflow** (no shell scripts)
+* **WebGL2** via Emscripten HTML5 APIs
+* A tiny runtime hook that calls:
+
+  * `initWebGL()` → create GL context on `<canvas id="canvas">`
+  * `startMainLoop()` → begin the render loop
+* `myFunction()` is **EXPORTED** and can be called from DevTools:
+
+  ```js
+  Module.ccall('myFunction', null, [], []);
+  ```
+
+---
+
+## Build Matrix
+
+### With presets (recommended)
+
+```bash
+# WASM (Debug)
+emcmake cmake --preset wasm-debug
+cmake --build --preset wasm-debug
+cmake --build --preset wasm-debug --target serve
+```
+
+### Without presets
+
+```bash
+emcmake cmake -S . -B build-wasm -G Ninja -DCMAKE_BUILD_TYPE=Debug
+cmake --build build-wasm
+(cd build-wasm && python3 -m http.server 8000)
+```
+
+> **Native builds:** this repo’s `src/render.c` is Emscripten/WebGL2-only. To support native, add a `render_native.c` (e.g., GLFW/SDL) and wire it in CMake for non-Emscripten targets.
+
+---
+
+## Configuration
+
+These CMake options/variables are supported:
+
+| Option / Var      |   Default | Purpose                                                          |
+| ----------------- | --------: | ---------------------------------------------------------------- |
+| `BUILD_WASM_HTML` |      `ON` | Use a custom HTML shell if found, otherwise Emscripten’s default |
+| `SERVE_PORT`      |    `8000` | Port for the `serve` target                                      |
+| `SERVE_HOST`      | `0.0.0.0` | Bind address for the `serve` target                              |
+
+Override at configure time, e.g.:
+
+```bash
+emcmake cmake --preset wasm-debug -DSERVE_PORT=5173 -DSERVE_HOST=127.0.0.1
+```
+
+### Custom HTML Shell (optional)
+
+If `html_template/index.html` exists, it will be used automatically.
+Make sure it contains Emscripten’s placeholder:
+
+```html
+{{{ SCRIPT }}}
+```
+
+You can also add `html_template/init_runtime.js` to move your `Module.onRuntimeInitialized` code out of the HTML.
+
+---
+
+## Project Layout
+
+```
+.
+├─ CMakeLists.txt
+├─ CMakePresets.json         # presets for wasm-debug, etc.
+├─ include/
+│  └─ testProject/
+│     ├─ render.h
+│     └─ module.h
+├─ src/
+│  ├─ main.c                 # entry point
+│  ├─ render.c               # WebGL2 (Emscripten) renderer
+│  └─ module.c               # EMSCRIPTEN_KEEPALIVE myFunction()
+└─ html_template/            # (optional) custom shell / post-js
+   └─ index.html
+```
+
+---
 
 ## API Reference
 
-#### `int initWebGL(void)`
+### `int initWebGL(void)`
 
-Initializes a WebGL2 context on the `<canvas id="canvas">` element.  
-**Returns:** `1` on success, `0` on failure.
+Creates a WebGL2 context on `<canvas id="canvas">`.
+**Returns**: `1` on success, `0` on failure.
 
-#### `void startMainLoop(void)`
+### `void startMainLoop(void)`
 
-Starts the render loop; each frame simply clears the screen to a teal color.
+Starts the frame loop (clears to a solid color by default).
 
-#### `void myFunction(void)`
+### `void myFunction(void)`
 
-An EMSCRIPTEN_KEEPALIVE function exposed in the WASM build. Can be invoked from JavaScript via `Module.ccall('myFunction', null, [], []);`.
+Tagged `EMSCRIPTEN_KEEPALIVE`. Call from JS:
 
-## Appendix
+```js
+Module.ccall('myFunction', null, [], []);
+```
 
-- You can customize the HTML shell in `html_template/index.html` or provide your own via `html_template/`.
-- To adjust canvas dimensions, edit the `<canvas>` attributes in your HTML shell.
+---
 
-## Authors
+## Troubleshooting
 
-- [@yourusername](https://github.com/yourusername)
+* **Ninja not found**
+  `CMake was unable to find a build program corresponding to "Ninja"`
+  → `sudo apt-get install -y ninja-build` or use `-G "Unix Makefiles"` when configuring.
 
-## Badges
+* **Custom shell error**: `HTML shell must contain {{{ SCRIPT }}}`
+  → Add the placeholder to your `html_template/index.html`, or remove the `--shell-file` to use the default shell.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+* **Black/blank canvas**
 
-## Color Reference
+  * Check DevTools console for WebGL errors.
+  * Ensure your browser supports **WebGL2** and **WASM**.
 
-| Color      | Hex                                                                |
-| ---------- | ------------------------------------------------------------------ |
-| Teal Clear | ![#0a9396](https://via.placeholder.com/10/0a9396?text=+) `#0a9396` |
+* **Can’t reach the server from Windows (WSL)**
+  Use `-DSERVE_HOST=0.0.0.0` and open `http://localhost:<port>` from Windows.
+
+---
 
 ## Contributing
 
-Contributions are always welcome!  
-Please see `CONTRIBUTING.md` for guidelines and `CODE_OF_CONDUCT.md` for behavior expectations.
+PRs welcome! Please open an issue first for significant changes.
 
-## Demo
-
-After building the WASM target, run:
-
-```bash
-./build_and_run.sh
-```
-
-Then open your browser at `http://localhost:8000`.
-
-## Deployment
-
-This project is intended for local development; there’s no external deployment pipeline. Use the `build_and_run.sh` script to serve locally.
-
-## Documentation
-
-All usage instructions are in this README. For deeper dives, inspect the CMakeLists and source headers in `src/`.
-
-## Environment Variables
-
-_None required._
-
-## FAQ
-
-#### How do I change the canvas size?
-
-Edit the `width` and `height` attributes on the `<canvas>` in your HTML template (`html_template/index.html` or custom shell).
-
-#### Which browsers work?
-
-Any modern browser with WebAssembly and WebGL2 support (e.g., Chrome, Firefox, Edge).
-
-## Features
-
-- **Native build** via CMake (Ninja or Make)
-- **WASM build** via Emscripten with WebGL2/ES3 support
-- Auto-generated or custom HTML shell
-- Simple render loop clearing to a teal background
-- `build_and_run.sh` helper script with:
-  - `--no-serve` (build only)
-  - `--watch` (live-reload on changes)
-  - Customizable build directory, build type, project name
-
-## Feedback
-
-If you have any feedback, please open an issue or contact me at `me@example.com`.
-
-## 🚀 About Me
-
-I'm a Software Engineer passionate about cross-platform C/C++ and WebAssembly.
-
-## 🔗 Links
-
-[![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/yourusername)
-
-## 🛠 Skills
-
-C, C++, CMake, Emscripten, WebGL2, Bash
-
-## Installation
-
-```bash
-git clone https://github.com/yourusername/testProject.git
-cd testProject
-chmod +x build_and_run.sh
-```
-
-## Lessons Learned
-
-- Streamlined cross-compilation with CMake + Emscripten
-- Automated live-reload development workflow
-- Simple WebGL2 setup in C/C++ via the Emscripten HTML5 API
+---
 
 ## License
 
-[MIT](https://choosealicense.com/licenses/mit/)
+[MIT](https://opensource.org/licenses/MIT)
 
-![Logo](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/th5xamgrr6se0x5ro4g6.png)
+---
 
-## Optimizations
+## Acknowledgements
 
-- Auto-detects build system (Ninja vs. Make)
-- Port-conflict handling and browser auto-launch
+* [Awesome README](https://github.com/matiassingers/awesome-readme)
+* [How to write a Good README](https://bulldogjob.com/news/449-how-to-write-a-good-readme-for-your-github-project)
 
-## Related
+---
 
-- [Awesome README](https://github.com/matiassingers/awesome-readme)
+### Notes
 
-## Roadmap
-
-- Add modularized Emscripten build mode
-- Support more advanced rendering demos
-
-## Run Locally
-
-```bash
-./build_and_run.sh
-```
-
-## Screenshots
-
-![App Screenshot](https://via.placeholder.com/468x300?text=App+Screenshot+Here)
-
-## Support
-
-Open an issue or email `support@example.com`.
-
-## Tech Stack
-
-**Native:** C, C++  
-**Web:** WebAssembly (Emscripten), WebGL2
-
-## Running Tests
-
-_No tests available._
-
-## Usage/Examples
-
-```bash
-# Native build, run executable
-./build_and_run.sh --no-serve
-
-# WASM build with live-reload
-./build_and_run.sh --watch
-```
-
-## Used By
-
-This project is used by individual developers and as a learning template.
+* This dev server is for **local development** only. For production, serve the generated `index.html/js/wasm` behind a proper web server with correct caching and MIME types.
