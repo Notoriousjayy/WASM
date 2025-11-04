@@ -16,8 +16,6 @@ permissions:
 jobs:
   analyze:
     runs-on: ubuntu-latest
-    env:
-      EMSDK: ${{ runner.temp }}/emsdk
 
     steps:
       - uses: actions/checkout@v4
@@ -30,9 +28,11 @@ jobs:
       - name: Install Emscripten
         shell: bash
         run: |
+          EMSDK=/tmp/emsdk
           git clone https://github.com/emscripten-core/emsdk.git "$EMSDK"
           "$EMSDK/emsdk" install latest
           "$EMSDK/emsdk" activate latest
+          echo "EMSDK=$EMSDK" >> $GITHUB_ENV
           source "$EMSDK/emsdk_env.sh"
 
       - name: Build for CodeQL
