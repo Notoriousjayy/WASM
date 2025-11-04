@@ -28,8 +28,7 @@ jobs:
           git clone https://github.com/emscripten-core/emsdk.git "$EMSDK"
           "$EMSDK/emsdk" install latest
           "$EMSDK/emsdk" activate latest
-          echo "EMSDK=$EMSDK" >> $GITHUB_ENV
-          source "$EMSDK/emsdk_env.sh"
+          echo "EMSDK=$EMSDK" >> "$GITHUB_ENV"
 
       - name: Cache Emscripten build cache
         uses: actions/cache@v4
@@ -42,7 +41,7 @@ jobs:
       - name: Configure & Build
         shell: bash
         run: |
-          source "$EMSDK/emsdk_env.sh"
+          source /tmp/emsdk/emsdk_env.sh
           emcmake cmake --preset wasm-debug
           cmake --build --preset wasm-debug -j2
 
