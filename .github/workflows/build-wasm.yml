@@ -1,0 +1,58 @@
+# Build & Test workflow for WebGL2 WASM Pong
+name: Build (WASM C++)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      EMSDK: ${{ runner.temp }}/emsdk
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Emscripten
+        shell: bash
+        run: |
+          git clone https://github.com/emscripten-core/emsdk.git "$EMSDK"
+          "$EMSDK/emsdk" install latest
+          "$EMSDK/emsdk" activate latest
+          echo "EMSDK=$EMSDK" >> $GITHUB_ENV
+
+      - name: Cache Emscripten build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.emscripten_cache
+            ${{ env.EMSDK }}/upstream/emscripten/cache
+          key: emsdk-${{ runner.os }}-latest
+
+      - name: Configure (CMakePreset: wasm-debug)
+        shell: bash
+        run: |
+          source "$EMSDK/emsdk_env.sh"
+          emcmake cmake --preset wasm-debug
+
+      - name: Build
+        shell: bash
+        run: |
+          source "$EMSDK/emsdk_env.sh"
+          cmake --build --preset wasm-debug -j2
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-build
+          path: |
+            build-wasm/*.wasm
+            build-wasm/*.js
+            build-wasm/*.data
+            build-wasm/*.html

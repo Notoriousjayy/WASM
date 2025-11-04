@@ -1,0 +1,61 @@
+# Release workflow - triggered on version tags
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      EMSDK: ${{ runner.temp }}/emsdk
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Emscripten
+        shell: bash
+        run: |
+          git clone https://github.com/emscripten-core/emsdk.git "$EMSDK"
+          "$EMSDK/emsdk" install latest
+          "$EMSDK/emsdk" activate latest
+          source "$EMSDK/emsdk_env.sh"
+
+      - name: Cache Emscripten build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.emscripten_cache
+            ${{ env.EMSDK }}/upstream/emscripten/cache
+          key: emsdk-${{ runner.os }}-latest
+
+      - name: Build Release
+        shell: bash
+        run: |
+          source "$EMSDK/emsdk_env.sh"
+          emcmake cmake --preset wasm-debug
+          cmake --build --preset wasm-debug -j2
+          mkdir -p release
+          cp build-wasm/index.html release/
+          cp build-wasm/index.js release/
+          cp build-wasm/index.wasm release/
+          if [ -f build-wasm/index.data ]; then cp build-wasm/index.data release/; fi
+          cd release && zip -r pong-wasm.zip .
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/pong-wasm.zip
+          body: |
+            ## WebGL2 WASM Pong Release
+            
+            Download and extract the zip file, then serve it with any static server:
+```bash
+            python3 -m http.server 8000
+```
+            
+            Open http://localhost:8000 and press SPACE to start playing!

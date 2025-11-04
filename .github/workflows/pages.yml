@@ -1,0 +1,74 @@
+# Deploy to GitHub Pages
+name: Deploy (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      EMSDK: ${{ runner.temp }}/emsdk
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Emscripten
+        shell: bash
+        run: |
+          git clone https://github.com/emscripten-core/emsdk.git "$EMSDK"
+          "$EMSDK/emsdk" install latest
+          "$EMSDK/emsdk" activate latest
+          echo "EMSDK=$EMSDK" >> $GITHUB_ENV
+          source "$EMSDK/emsdk_env.sh"
+
+      - name: Cache Emscripten build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.emscripten_cache
+            ${{ env.EMSDK }}/upstream/emscripten/cache
+          key: emsdk-${{ runner.os }}-latest
+
+      - name: Configure & Build
+        shell: bash
+        run: |
+          source "$EMSDK/emsdk_env.sh"
+          emcmake cmake --preset wasm-debug
+          cmake --build --preset wasm-debug -j2
+
+      - name: Prepare site directory
+        run: |
+          mkdir -p site
+          cp build-wasm/index.html site/
+          cp build-wasm/index.js site/
+          cp build-wasm/index.wasm site/
+          if [ -f build-wasm/index.data ]; then cp build-wasm/index.data site/; fi
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

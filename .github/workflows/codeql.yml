@@ -1,0 +1,46 @@
+# CodeQL security analysis
+name: CodeQL (C/C++)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"  # Weekly on Mondays
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    env:
+      EMSDK: ${{ runner.temp }}/emsdk
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: cpp
+
+      - name: Install Emscripten
+        shell: bash
+        run: |
+          git clone https://github.com/emscripten-core/emsdk.git "$EMSDK"
+          "$EMSDK/emsdk" install latest
+          "$EMSDK/emsdk" activate latest
+          source "$EMSDK/emsdk_env.sh"
+
+      - name: Build for CodeQL
+        shell: bash
+        run: |
+          source "$EMSDK/emsdk_env.sh"
+          emcmake cmake --preset wasm-debug
+          cmake --build --preset wasm-debug -j2
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
