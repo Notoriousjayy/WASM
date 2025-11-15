@@ -1,4 +1,4 @@
-/* render.c — polygon renderer with logging + idempotent main loop */
+/* render.c — polygon renderer with obvious motion + logging */
 
 #include "render.h"
 #include "polygon.h"
@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <math.h>
 
 /* Global WebGL objects */
 static EMSCRIPTEN_WEBGL_CONTEXT_HANDLE g_ctx = 0;
@@ -16,8 +17,13 @@ static GLuint   program     = 0;
 static GLuint   vao         = 0;
 static GLuint   vbo         = 0;
 static GLsizei  vertexCount = 0;
-static Polygon  g_polygon;
+static Polygon  g_polygon;        /* animated polygon */
+static Point2D *g_baseVerts = NULL;  /* original (untransformed) vertices */
 static bool     g_main_loop_started = false;
+
+/* CPU-side mirror of vertex data (x0,y0,x1,y1,...) for VBO updates */
+static float   *g_vertexData       = NULL;
+static size_t   g_vertexFloatCount = 0;
 
 /* Simple pass-through vertex shader */
 static const char *VERT_SRC =
@@ -90,7 +96,7 @@ int initWebGL(void)
 {
     printf("[initWebGL] starting\n");
 
-    /* 0) Create and activate a WebGL2 context on <canvas id="canvas"> */
+    /* 0) Create and activate a WebGL2 context on <canvas id=\"canvas\"> */
     if (!g_ctx) {
         EmscriptenWebGLContextAttributes attr;
         emscripten_webgl_init_context_attributes(&attr);
@@ -160,85 +166,62 @@ int initWebGL(void)
     glDeleteShader(vs);
     glDeleteShader(fs);
 
-#if 0
-    GLint linked = 0;
-    glGetProgramiv(program, GL_LINK_STATUS, &linked);
-    if (!linked) {
-        GLint len = 0;
-        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &len);
-        char *log = (char *)malloc((size_t)len);
-        if (log) {
-            glGetProgramInfoLog(program, len, NULL, log);
-            fprintf(stderr, "Program link error:\n%s\n", log);
-            free(log);
-        }
-        return 0;
-    }
-#endif
-
     /* 2) Build a polygon in NDC space */
     polygon_init(&g_polygon);
 
     printf("[initWebGL] building regular hexagon polygon...\n");
-    if (!polygon_make_regular_ngon(&g_polygon, 6U, 0.5)) {
-        printf("[initWebGL] ⚠ polygon_make_regular_ngon failed, falling back to triangle\n");
-
-        /* Simple triangle fallback */
-        float tri[] = {
-            -0.5f, -0.5f,
-             0.5f, -0.5f,
-             0.0f,  0.5f
-        };
-        vertexCount = 3;
-
-        glGenVertexArrays(1, &vao);
-        glGenBuffers(1, &vbo);
-
-        glBindVertexArray(vao);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)sizeof tri, tri, GL_STATIC_DRAW);
-
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
-                              (GLsizei)(2 * (GLint)sizeof(float)), (const void *)0);
-    } else {
-        if (g_polygon.count == 0U || g_polygon.vertices == NULL) {
-            fprintf(stderr, "[initWebGL] polygon is empty\n");
-            return 0;
-        }
-
-        printf("[initWebGL] polygon has %zu vertices\n", g_polygon.count);
-        vertexCount = (GLsizei)g_polygon.count;
-
-        /* Flatten polygon vertices to float buffer [x0,y0,x1,y1,...] */
-        float *verts = (float *)malloc(sizeof(float) * 2U * (size_t)vertexCount);
-        if (!verts) {
-            fprintf(stderr, "[initWebGL] malloc failed for verts\n");
-            return 0;
-        }
-
-        for (size_t i = 0U; i < (size_t)vertexCount; ++i) {
-            verts[i * 2U + 0U] = (float)g_polygon.vertices[i].x;
-            verts[i * 2U + 1U] = (float)g_polygon.vertices[i].y;
-        }
-
-        /* 3) Upload into VAO/VBO */
-        glGenVertexArrays(1, &vao);
-        glGenBuffers(1, &vbo);
-
-        glBindVertexArray(vao);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER,
-                     (GLsizeiptr)(sizeof(float) * 2U * (size_t)vertexCount),
-                     verts,
-                     GL_STATIC_DRAW);
-
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
-                              (GLsizei)(2 * (GLint)sizeof(float)), (const void *)0);
-
-        free(verts);
+    if (!polygon_make_regular_ngon(&g_polygon, 6U, 0.3)) { /* slightly smaller radius */
+        printf("[initWebGL] ⚠ polygon_make_regular_ngon failed\n");
+        return 0;
     }
+
+    if (!polygon_is_valid(&g_polygon)) {
+        printf("[initWebGL] polygon not valid\n");
+        return 0;
+    }
+
+    printf("[initWebGL] polygon has %zu vertices\n", g_polygon.count);
+    vertexCount        = (GLsizei)g_polygon.count;
+    g_vertexFloatCount = (size_t)vertexCount * 2U;
+
+    /* Store base vertices (untransformed) for animation */
+    free(g_baseVerts);
+    g_baseVerts = (Point2D *)malloc(sizeof(Point2D) * g_polygon.count);
+    if (!g_baseVerts) {
+        fprintf(stderr, "[initWebGL] malloc failed for g_baseVerts\n");
+        return 0;
+    }
+    for (size_t i = 0; i < g_polygon.count; ++i) {
+        g_baseVerts[i] = g_polygon.vertices[i];
+    }
+
+    /* Allocate CPU-side vertex buffer */
+    free(g_vertexData);
+    g_vertexData = (float *)malloc(sizeof(float) * g_vertexFloatCount);
+    if (!g_vertexData) {
+        fprintf(stderr, "[initWebGL] malloc failed for g_vertexData\n");
+        return 0;
+    }
+
+    for (size_t i = 0U; i < (size_t)vertexCount; ++i) {
+        g_vertexData[2U * i + 0U] = (float)g_polygon.vertices[i].x;
+        g_vertexData[2U * i + 1U] = (float)g_polygon.vertices[i].y;
+    }
+
+    /* 3) Upload into VAO/VBO */
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER,
+                 (GLsizeiptr)(sizeof(float) * g_vertexFloatCount),
+                 g_vertexData,
+                 GL_DYNAMIC_DRAW); /* dynamic, since we'll update each tick */
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
+                          (GLsizei)(2 * (GLint)sizeof(float)), (const void *)0);
 
     /* Black background (screen stays black) */
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -249,8 +232,67 @@ int initWebGL(void)
 /* per-frame draw function */
 static void tick(void)
 {
+    static int frameCount = 0;
+
     if (g_ctx) {
         emscripten_webgl_make_context_current(g_ctx);
+    }
+
+    frameCount++;
+
+    if (polygon_is_valid(&g_polygon) &&
+        g_baseVerts != NULL &&
+        g_vertexData != NULL &&
+        g_vertexFloatCount == (size_t)vertexCount * 2U) {
+
+        /* Time-based angle and translation for obvious motion */
+        double t      = (double)frameCount;
+        double angle  = 0.05 * t;                 /* fast rotation */
+        double orbitR = 0.6;                      /* orbit radius in NDC */
+        double tx     = orbitR * cos(0.01 * t);   /* x offset */
+        double ty     = orbitR * sin(0.013 * t);  /* y offset */
+
+        double c = cos(angle);
+        double s = sin(angle);
+
+        /* Build animated polygon from base */
+        for (size_t i = 0; i < (size_t)vertexCount; ++i) {
+            double x0 = g_baseVerts[i].x;
+            double y0 = g_baseVerts[i].y;
+
+            /* rotate around origin */
+            double xr = c * x0 - s * y0;
+            double yr = s * x0 + c * y0;
+
+            /* then translate in an orbit */
+            double x = xr + tx;
+            double y = yr + ty;
+
+            g_polygon.vertices[i].x = x;
+            g_polygon.vertices[i].y = y;
+
+            g_vertexData[2U * i + 0U] = (float)x;
+            g_vertexData[2U * i + 1U] = (float)y;
+        }
+
+        /* Upload updated vertices */
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferSubData(GL_ARRAY_BUFFER,
+                        0,
+                        (GLsizeiptr)(sizeof(float) * g_vertexFloatCount),
+                        g_vertexData);
+
+        /* Log first vertex + perimeter frequently so you see it move */
+        if ((frameCount % 30) == 0) {
+            const Point2D *p0 = &g_polygon.vertices[0];
+            const double   per = polygon_perimeter(&g_polygon);
+            printf("[tick] frame=%d first=(%.3f, %.3f) perimeter=%.3f\n",
+                   frameCount, p0->x, p0->y, per);
+        }
+    } else {
+        if ((frameCount % 60) == 0) {
+            printf("[tick] frame=%d (animation conditions not met)\n", frameCount);
+        }
     }
 
     glClear(GL_COLOR_BUFFER_BIT);
