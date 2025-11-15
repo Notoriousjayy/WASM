@@ -11,36 +11,43 @@
 #include <stdbool.h>
 #include <math.h>
 
-/* Global WebGL objects */
+/* ------------------------------------------------------------------------- */
+/* Global WebGL / render state                                               */
+/* ------------------------------------------------------------------------- */
+
 static EMSCRIPTEN_WEBGL_CONTEXT_HANDLE g_ctx = 0;
+
 static GLuint   program     = 0;
 static GLuint   vao         = 0;
 static GLuint   vbo         = 0;
 static GLsizei  vertexCount = 0;
-static Polygon  g_polygon;        /* animated polygon */
-static Point2D *g_baseVerts = NULL;  /* original (untransformed) vertices */
+
+static Polygon  g_polygon;             /* animated polygon */
+static Point2D *g_baseVerts = NULL;    /* original (untransformed) vertices */
 static bool     g_main_loop_started = false;
 
 /* CPU-side mirror of vertex data (x0,y0,x1,y1,...) for VBO updates */
 static float   *g_vertexData       = NULL;
 static size_t   g_vertexFloatCount = 0;
 
-/* Simple pass-through vertex shader */
-static const char *VERT_SRC =
-  "#version 300 es\n"
-  "layout(location = 0) in vec2 aPos;\n"
-  "void main() {\n"
-  "  gl_Position = vec4(aPos, 0.0, 1.0);\n"
-  "}\n";
+/* ------------------------------------------------------------------------- */
+/* Shaders                                                                   */
+/* ------------------------------------------------------------------------- */
 
-/* Solid-red fragment shader */
+static const char *VERT_SRC =
+    "#version 300 es\n"
+    "layout(location = 0) in vec2 aPos;\n"
+    "void main() {\n"
+    "  gl_Position = vec4(aPos, 0.0, 1.0);\n"
+    "}\n";
+
 static const char *FRAG_SRC =
-  "#version 300 es\n"
-  "precision mediump float;\n"
-  "out vec4 outColor;\n"
-  "void main() {\n"
-  "  outColor = vec4(1.0, 0.0, 0.0, 1.0);\n"
-  "}\n";
+    "#version 300 es\n"
+    "precision mediump float;\n"
+    "out vec4 outColor;\n"
+    "void main() {\n"
+    "  outColor = vec4(1.0, 0.0, 0.0, 1.0);\n"
+    "}\n";
 
 static GLuint
 compileShader(GLenum type, const char *src)
@@ -66,7 +73,10 @@ compileShader(GLenum type, const char *src)
     return sh;
 }
 
-/* Resize callback: keep canvas size == browser window size */
+/* ------------------------------------------------------------------------- */
+/* Resize callback: keep canvas size == browser window size                  */
+/* ------------------------------------------------------------------------- */
+
 static EM_BOOL
 resize_callback(int eventType, const EmscriptenUiEvent *e, void *userData)
 {
@@ -91,12 +101,16 @@ resize_callback(int eventType, const EmscriptenUiEvent *e, void *userData)
     return EM_TRUE;
 }
 
+/* ------------------------------------------------------------------------- */
+/* initWebGL                                                                 */
+/* ------------------------------------------------------------------------- */
+
 EMSCRIPTEN_KEEPALIVE
 int initWebGL(void)
 {
     printf("[initWebGL] starting\n");
 
-    /* 0) Create and activate a WebGL2 context on <canvas id=\"canvas\"> */
+    /* 0) Create and activate a WebGL2 context on <canvas id="canvas"> */
     if (!g_ctx) {
         EmscriptenWebGLContextAttributes attr;
         emscripten_webgl_init_context_attributes(&attr);
@@ -223,17 +237,21 @@ int initWebGL(void)
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
                           (GLsizei)(2 * (GLint)sizeof(float)), (const void *)0);
 
-    /* Black background (screen stays black) */
+    /* Black background */
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     printf("[initWebGL] done\n");
     return 1; /* success */
 }
 
-/* per-frame draw function */
+/* ------------------------------------------------------------------------- */
+/* Per-frame draw function                                                   */
+/* ------------------------------------------------------------------------- */
+
 static void tick(void)
 {
     static int frameCount = 0;
 
+    /* Make sure our WebGL context is current before drawing */
     if (g_ctx) {
         emscripten_webgl_make_context_current(g_ctx);
     }
@@ -243,9 +261,9 @@ static void tick(void)
     if (polygon_is_valid(&g_polygon) &&
         g_baseVerts != NULL &&
         g_vertexData != NULL &&
-        g_vertexFloatCount == (size_t)vertexCount * 2U) {
-
-        /* Time-based angle and translation for obvious motion */
+        g_vertexFloatCount == (size_t)vertexCount * 2U)
+    {
+        /* Time-based angle and translation for very obvious motion */
         double t      = (double)frameCount;
         double angle  = 0.05 * t;                 /* fast rotation */
         double orbitR = 0.6;                      /* orbit radius in NDC */
@@ -255,7 +273,7 @@ static void tick(void)
         double c = cos(angle);
         double s = sin(angle);
 
-        /* Build animated polygon from base */
+        /* Build animated polygon from base vertices */
         for (size_t i = 0; i < (size_t)vertexCount; ++i) {
             double x0 = g_baseVerts[i].x;
             double y0 = g_baseVerts[i].y;
@@ -275,23 +293,24 @@ static void tick(void)
             g_vertexData[2U * i + 1U] = (float)y;
         }
 
-        /* Upload updated vertices */
+        /* Upload updated vertices to GPU */
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferSubData(GL_ARRAY_BUFFER,
                         0,
                         (GLsizeiptr)(sizeof(float) * g_vertexFloatCount),
                         g_vertexData);
 
-        /* Log first vertex + perimeter frequently so you see it move */
+        /* Log first vertex and perimeter regularly so you can see motion */
         if ((frameCount % 30) == 0) {
             const Point2D *p0 = &g_polygon.vertices[0];
-            const double   per = polygon_perimeter(&g_polygon);
+            double per = polygon_perimeter(&g_polygon);
             printf("[tick] frame=%d first=(%.3f, %.3f) perimeter=%.3f\n",
                    frameCount, p0->x, p0->y, per);
         }
     } else {
         if ((frameCount % 60) == 0) {
-            printf("[tick] frame=%d (animation conditions not met)\n", frameCount);
+            printf("[tick] frame=%d (animation conditions not met)\n",
+                   frameCount);
         }
     }
 
@@ -303,6 +322,10 @@ static void tick(void)
         glDrawArrays(GL_LINE_LOOP, 0, vertexCount);
     }
 }
+
+/* ------------------------------------------------------------------------- */
+/* startMainLoop                                                             */
+/* ------------------------------------------------------------------------- */
 
 EMSCRIPTEN_KEEPALIVE
 void startMainLoop(void)
