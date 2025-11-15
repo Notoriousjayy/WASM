@@ -12,8 +12,10 @@ set(SERVE_HOST "0.0.0.0" CACHE STRING "Dev server bind address")
 
 # --- Sources ---------------------------------------------------------------
 set(SOURCES
-  src/main.c
-  src/module.c
+    src/main.c
+    src/module.c
+    src/render.c
+    src/polygon.c
 )
 
 # WebGL2 renderer is Emscripten-only

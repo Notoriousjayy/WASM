@@ -4,6 +4,11 @@
 #include <string.h>
 #include <math.h>
 
+/* Local PI constant for portability (C standard doesn't define M_PI). */
+#ifndef POLYGON_PI
+#define POLYGON_PI 3.141592653589793238462643383279502884
+#endif
+
 /* Internal helper: ensure polygon has at least min_capacity vertices allocated. */
 static bool polygon_ensure_capacity(Polygon *poly, size_t min_capacity) {
     if (!poly) {
@@ -14,13 +19,14 @@ static bool polygon_ensure_capacity(Polygon *poly, size_t min_capacity) {
         return true;
     }
 
-    size_t new_capacity = (poly->capacity == 0) ? 4U : poly->capacity;
+    size_t new_capacity = (poly->capacity == 0U) ? 4U : poly->capacity;
     while (new_capacity < min_capacity) {
         /* Simple growth strategy: double until sufficient. */
         new_capacity *= 2U;
     }
 
-    Point2D *new_vertices = (Point2D *)realloc(poly->vertices, new_capacity * sizeof(Point2D));
+    Point2D *new_vertices = (Point2D *)realloc(poly->vertices,
+                                               new_capacity * sizeof(Point2D));
     if (!new_vertices) {
         return false;
     }
@@ -194,4 +200,85 @@ double polygon_perimeter(const Polygon *poly) {
     }
 
     return perimeter;
+}
+
+bool polygon_make_regular_ngon(Polygon *poly, size_t sides, double radius) {
+    if (!poly) {
+        return false;
+    }
+    if (sides < 3U || radius <= 0.0) {
+        return false;
+    }
+
+    /* Clear any existing data. */
+    polygon_clear(poly);
+
+    /* Pre-allocate storage for 'sides' vertices. */
+    if (!polygon_init_with_capacity(poly, sides)) {
+        /* polygon_init_with_capacity already leaves 'poly' in an empty state. */
+        return false;
+    }
+
+    const double two_pi = 2.0 * POLYGON_PI;
+
+    for (size_t i = 0U; i < sides; ++i) {
+        const double t     = (double)i / (double)sides;
+        const double theta = two_pi * t;
+        const double x     = cos(theta) * radius;
+        const double y     = sin(theta) * radius;
+
+        if (!polygon_add_vertex(poly, x, y)) {
+            polygon_clear(poly);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+size_t polygon_copy_to_float_xy(const Polygon *poly,
+                                float        *buffer,
+                                size_t        buffer_capacity) {
+    if (!poly || !buffer || buffer_capacity < 2U) {
+        return 0U;
+    }
+
+    const size_t max_vertices = buffer_capacity / 2U;
+    const size_t count        = (poly->count < max_vertices)
+                                ? poly->count
+                                : max_vertices;
+
+    for (size_t i = 0U; i < count; ++i) {
+        buffer[2U * i + 0U] = (float)poly->vertices[i].x;
+        buffer[2U * i + 1U] = (float)poly->vertices[i].y;
+    }
+
+    return count;
+}
+
+float *polygon_alloc_float_xy(const Polygon *poly, size_t *out_float_cnt) {
+    if (out_float_cnt) {
+        *out_float_cnt = 0U;
+    }
+
+    if (!poly || poly->count == 0U) {
+        return NULL;
+    }
+
+    const size_t float_count = poly->count * 2U;
+    float *buffer = (float *)malloc(float_count * sizeof *buffer);
+    if (!buffer) {
+        return NULL;
+    }
+
+    for (size_t i = 0U; i < poly->count; ++i) {
+        buffer[2U * i + 0U] = (float)poly->vertices[i].x;
+        buffer[2U * i + 1U] = (float)poly->vertices[i].y;
+    }
+
+    if (out_float_cnt) {
+        *out_float_cnt = float_count;
+    }
+
+    return buffer;
 }

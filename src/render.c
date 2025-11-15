@@ -1,21 +1,19 @@
-/* render.c — drop-in replacement */
+/* render.c — polygon version */
 
 #include "render.h"
+#include "polygon.h"
+
 #include <GLES3/gl3.h>
 #include <emscripten.h>
 #include <emscripten/html5.h>
 #include <stdio.h>
-#include <math.h>
 #include <stdlib.h>
-
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
 
 static GLuint   program     = 0;
 static GLuint   vao         = 0;
 static GLuint   vbo         = 0;
 static GLsizei  vertexCount = 0;
+static Polygon  g_polygon;
 
 /* Simple pass-through vertex shader */
 static const char* VERT_SRC =
@@ -54,7 +52,8 @@ int initWebGL(void) {
     attr.depth        = EM_FALSE;
     ctx = emscripten_webgl_create_context("#canvas", &attr);
     if (ctx <= 0) {
-      printf("❌ emscripten_webgl_create_context failed (%lu)\n", (unsigned long)ctx);
+      printf("❌ emscripten_webgl_create_context failed (%lu)\n",
+             (unsigned long)ctx);
       return 0;
     }
     emscripten_webgl_make_context_current(ctx);
@@ -75,39 +74,52 @@ int initWebGL(void) {
   glDeleteShader(fs);
   /* (Optional) Check link status here */
 
-  /* 2) Build a unit-circle as a TRIANGLE_FAN around (0,0) */
-  const int SEGMENTS = 64;
-  vertexCount = SEGMENTS + 2;
-  float *verts = malloc(sizeof(float) * 2 * vertexCount);
+  /* 2) Build a polygon in NDC space */
+  polygon_init(&g_polygon);
 
-  /* center point */
-  verts[0] = 0.0f;
-  verts[1] = 0.0f;
+  /* Example: regular hexagon with radius 0.5 */
+  if (!polygon_make_regular_ngon(&g_polygon, 6, 0.5f)) {
+    fprintf(stderr, "Failed to build polygon geometry\n");
+    return 0;
+  }
 
-  /* circumference points */
-  for (int i = 0; i <= SEGMENTS; ++i) {
-    float t     = (float)i / (float)SEGMENTS;
-    float theta = 2.0f * M_PI * t;
-    verts[(i+1)*2 + 0] = cosf(theta) * 0.5f;
-    verts[(i+1)*2 + 1] = sinf(theta) * 0.5f;
+  if (g_polygon.count == 0 || g_polygon.vertices == NULL) {
+    fprintf(stderr, "Polygon is empty\n");
+    return 0;
+  }
+
+  vertexCount = (GLsizei)g_polygon.count;
+
+  /* Flatten polygon vertices to float buffer [x0,y0,x1,y1,...] */
+  float *verts = malloc(sizeof(float) * 2 * (size_t)vertexCount);
+  if (!verts) {
+    fprintf(stderr, "malloc failed for verts\n");
+    return 0;
+  }
+
+  for (size_t i = 0; i < (size_t)vertexCount; ++i) {
+    verts[i * 2 + 0] = g_polygon.vertices[i].x;
+    verts[i * 2 + 1] = g_polygon.vertices[i].y;
   }
 
   /* 3) Upload into VAO/VBO */
   glGenVertexArrays(1, &vao);
   glGenBuffers(1, &vbo);
+
   glBindVertexArray(vao);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
   glBufferData(GL_ARRAY_BUFFER,
-               sizeof(float)*2*vertexCount,
+               sizeof(float) * 2 * (size_t)vertexCount,
                verts,
                GL_STATIC_DRAW);
+
   glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), 0);
+  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0);
 
   free(verts);
 
   /* 4) Set clear color (white background) */
-  glClearColor(1.0, 1.0, 1.0, 1.0);
+  glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 
   return 1;  /* success */
 }
@@ -117,7 +129,9 @@ static void tick(void) {
   glClear(GL_COLOR_BUFFER_BIT);
   glUseProgram(program);
   glBindVertexArray(vao);
-  glDrawArrays(GL_TRIANGLE_FAN, 0, vertexCount);
+
+  /* Draw outlined polygon */
+  glDrawArrays(GL_LINE_LOOP, 0, vertexCount);
 }
 
 EMSCRIPTEN_KEEPALIVE

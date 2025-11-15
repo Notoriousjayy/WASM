@@ -93,6 +93,61 @@ void polygon_rotate(Polygon *poly, double radians);
  */
 double polygon_perimeter(const Polygon *poly);
 
+/**
+ * Populate the polygon with a regular N-gon centered at the origin.
+ *
+ * - Existing vertices are cleared.
+ * - The polygon will contain 'sides' vertices equally spaced on a circle
+ *   of radius 'radius' centered at (0, 0).
+ *
+ * Returns false if:
+ *   - poly is NULL
+ *   - sides < 3
+ *   - radius <= 0
+ *   - allocation fails
+ */
+bool polygon_make_regular_ngon(Polygon *poly, size_t sides, double radius);
+
+/**
+ * Copy polygon vertices into an interleaved float buffer:
+ *
+ *   buffer = [x0, y0, x1, y1, ..., x_{n-1}, y_{n-1}]
+ *
+ * Up to floor(buffer_capacity / 2) vertices are copied.
+ *
+ * Parameters:
+ *   poly             - polygon to copy from
+ *   buffer           - destination float array
+ *   buffer_capacity  - number of float elements available in 'buffer'
+ *
+ * Returns:
+ *   Number of vertices actually copied into 'buffer'.
+ *
+ * This is convenient for passing vertex data to graphics APIs that expect
+ * 32-bit float positions (e.g., OpenGL, WebGL, Direct3D).
+ */
+size_t polygon_copy_to_float_xy(const Polygon *poly,
+                                float        *buffer,
+                                size_t        buffer_capacity);
+
+/**
+ * Allocate an interleaved float buffer for the polygon and copy vertices:
+ *
+ *   result = [x0, y0, x1, y1, ..., x_{n-1}, y_{n-1}]
+ *
+ * Parameters:
+ *   poly          - polygon to copy from
+ *   out_float_cnt - optional; if non-NULL, receives the number of floats
+ *                   stored in the returned buffer (2 * poly->count).
+ *
+ * Returns:
+ *   - Pointer to a heap-allocated float array on success.
+ *   - NULL on allocation failure or if the polygon is empty.
+ *
+ * The caller owns the returned buffer and must free() it when no longer needed.
+ */
+float *polygon_alloc_float_xy(const Polygon *poly, size_t *out_float_cnt);
+
 #ifdef __cplusplus
 }
 #endif
