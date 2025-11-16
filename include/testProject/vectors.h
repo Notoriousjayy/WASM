@@ -8,10 +8,6 @@
 #include <stdio.h>
 #endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* Angle conversion helpers (functions, not macros) */
 float RAD2DEG(float radians);
 float DEG2RAD(float degrees);
@@ -152,9 +148,5 @@ vec3 vec3_perpendicular(vec3 length, vec3 direction);
 /* Reflection of sourceVector about normal */
 vec2 vec2_reflect(vec2 sourceVector, vec2 normal);
 vec3 vec3_reflect(vec3 sourceVector, vec3 normal);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* MATH_VECTORS_H_ */

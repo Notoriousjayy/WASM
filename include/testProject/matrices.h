@@ -17,10 +17,6 @@
 
 #include "vectors.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* ============================================================================
  *  Matrix types
  * ==========================================================================*/
@@ -59,7 +55,7 @@ typedef struct mat4 {
 } mat4;
 
 /* ============================================================================
- *  Small helpers (C replacements for C++ constructors / operator[])
+ *  Small helpers (convenience constructors and row access helpers)
  * ==========================================================================*/
 
 static inline mat2 mat2_identity(void) {
@@ -147,7 +143,7 @@ static inline const float *mat4_row_const(const mat4 *m, int row) {
 }
 
 /* ============================================================================
- *  Extras: comparisons and printing (replacement for operator==, !=, <<)
+ *  Extras: comparisons and printing helpers
  * ==========================================================================*/
 
 #ifndef NO_EXTRAS
@@ -159,7 +155,7 @@ bool mat2_not_equal(mat2 l, mat2 r);
 bool mat3_not_equal(mat3 l, mat3 r);
 bool mat4_not_equal(mat4 l, mat4 r);
 
-/* Replacement for std::ostream << operators */
+/* Formatted printing helpers */
 void mat2_fprintf(FILE *stream, const mat2 *m);
 void mat3_fprintf(FILE *stream, const mat3 *m);
 void mat4_fprintf(FILE *stream, const mat4 *m);
@@ -172,13 +168,13 @@ void mat4_fprintf(FILE *stream, const mat4 *m);
 /* Raw transpose of an arbitrary float matrix */
 void Transpose(const float *srcMat, float *dstMat, int srcRows, int srcCols);
 
-/* Dimension-specific versions (replacing C++ overloads) */
+/* Dimension-specific versions */
 mat2 mat2_transpose(mat2 matrix);
 mat3 mat3_transpose(mat3 matrix);
 mat4 mat4_transpose(mat4 matrix);
 
 /* ============================================================================
- *  Scalar multiply (replacing matN operator*(matN, float))
+ *  Scalar multiply
  * ==========================================================================*/
 
 mat2 mat2_mul_scalar(mat2 matrix, float scalar);
@@ -195,7 +191,7 @@ bool Multiply(float *out,
               const float *matA, int aRows, int aCols,
               const float *matB, int bRows, int bCols);
 
-/* Dimension-specific versions (replacing operator*(matN, matN)) */
+/* Dimension-specific versions */
 mat2 mat2_mul(mat2 matrixA, mat2 matrixB);
 mat3 mat3_mul(mat3 matrixA, mat3 matrixB);
 mat4 mat4_mul(mat4 matrixA, mat4 matrixB);
@@ -204,8 +200,8 @@ mat4 mat4_mul(mat4 matrixA, mat4 matrixB);
  *  Minors, cofactors, determinant, adjugate, inverse
  * ==========================================================================*/
 
-mat2 mat3_cut(mat3 mat, int row, int col);   /* replaces Cut(mat3, ...) -> mat2  */
-mat3 mat4_cut(mat4 mat, int row, int col);   /* replaces Cut(mat4, ...) -> mat3  */
+mat2 mat3_cut(mat3 mat, int row, int col);   /* Cut 3x3 -> 2x2  */
+mat3 mat4_cut(mat4 mat, int row, int col);   /* Cut 4x4 -> 3x3  */
 
 void Cofactor(float *out, const float *minor, int rows, int cols); /* raw */
 
@@ -250,7 +246,7 @@ mat4 mat4_translation_vec3(vec3 pos);
 vec3 mat4_get_translation(mat4 mat);
 
 #ifndef NO_EXTRAS
-/* Optional aliases (replacing C++ Translate overloads) */
+/* Optional aliases */
 mat4 mat4_translate_xyz(float x, float y, float z);
 mat4 mat4_translate_vec3(vec3 pos);
 #endif
@@ -333,7 +329,7 @@ mat4 Projection(float fov, float aspect, float zNear, float zFar);
 mat4 Ortho(float left, float right, float bottom, float top, float zNear, float zFar);
 
 /* ============================================================================
- *  Decompose rotation (mat3 -> Euler or similar; semantics as original)
+ *  Decompose rotation (mat3 -> Euler or similar)
  * ==========================================================================*/
 
 vec3 Decompose(mat3 rot);
@@ -345,10 +341,6 @@ vec3 Decompose(mat3 rot);
 #ifndef NO_EXTRAS
 mat3 mat3_fast_inverse(mat3 mat);
 mat4 mat4_fast_inverse(mat4 mat);
-#endif
-
-#ifdef __cplusplus
-}
 #endif
 
 #endif /* _H_MATH_MATRICES_ */
