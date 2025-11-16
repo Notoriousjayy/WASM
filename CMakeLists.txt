@@ -11,11 +11,9 @@ set(SERVE_PORT "8000" CACHE STRING "Dev server port")
 set(SERVE_HOST "0.0.0.0" CACHE STRING "Dev server bind address")
 
 # --- Sources ---------------------------------------------------------------
-set(SOURCES
-    src/main.c
-    src/module.c
-    src/render.c
-    src/polygon.c
+# Start with *all* .c files from src/
+file(GLOB SOURCES CONFIGURE_DEPENDS
+    "${CMAKE_SOURCE_DIR}/src/*.c"
 )
 
 # WebGL2 renderer is Emscripten-only

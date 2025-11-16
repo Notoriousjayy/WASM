@@ -56,91 +56,32 @@ typedef struct mat4 {
 
 /* ============================================================================
  *  Small helpers (convenience constructors and row access helpers)
+ *  (Declarations only; implementations live in matrices.c)
  * ==========================================================================*/
 
-static inline mat2 mat2_identity(void) {
-    mat2 m = {
-        ._11 = 1.0f, ._12 = 0.0f,
-        ._21 = 0.0f, ._22 = 1.0f
-    };
-    return m;
-}
+/* mat2 helpers */
+mat2 mat2_identity(void);
+mat2 mat2_make(float f11, float f12,
+               float f21, float f22);
+float       *mat2_row(mat2 *m, int row);
+const float *mat2_row_const(const mat2 *m, int row);
 
-static inline mat2 mat2_make(float f11, float f12,
-                             float f21, float f22) {
-    mat2 m = {
-        ._11 = f11, ._12 = f12,
-        ._21 = f21, ._22 = f22
-    };
-    return m;
-}
+/* mat3 helpers */
+mat3 mat3_identity(void);
+mat3 mat3_make(float f11, float f12, float f13,
+               float f21, float f22, float f23,
+               float f31, float f32, float f33);
+float       *mat3_row(mat3 *m, int row);
+const float *mat3_row_const(const mat3 *m, int row);
 
-static inline float *mat2_row(mat2 *m, int row) {
-    return &m->asArray[row * 2];
-}
-
-static inline const float *mat2_row_const(const mat2 *m, int row) {
-    return &m->asArray[row * 2];
-}
-
-static inline mat3 mat3_identity(void) {
-    mat3 m = {
-        ._11 = 1.0f, ._12 = 0.0f, ._13 = 0.0f,
-        ._21 = 0.0f, ._22 = 1.0f, ._23 = 0.0f,
-        ._31 = 0.0f, ._32 = 0.0f, ._33 = 1.0f
-    };
-    return m;
-}
-
-static inline mat3 mat3_make(float f11, float f12, float f13,
-                             float f21, float f22, float f23,
-                             float f31, float f32, float f33) {
-    mat3 m = {
-        ._11 = f11, ._12 = f12, ._13 = f13,
-        ._21 = f21, ._22 = f22, ._23 = f23,
-        ._31 = f31, ._32 = f32, ._33 = f33
-    };
-    return m;
-}
-
-static inline float *mat3_row(mat3 *m, int row) {
-    return &m->asArray[row * 3];
-}
-
-static inline const float *mat3_row_const(const mat3 *m, int row) {
-    return &m->asArray[row * 3];
-}
-
-static inline mat4 mat4_identity(void) {
-    mat4 m = {
-        ._11 = 1.0f, ._12 = 0.0f, ._13 = 0.0f, ._14 = 0.0f,
-        ._21 = 0.0f, ._22 = 1.0f, ._23 = 0.0f, ._24 = 0.0f,
-        ._31 = 0.0f, ._32 = 0.0f, ._33 = 1.0f, ._34 = 0.0f,
-        ._41 = 0.0f, ._42 = 0.0f, ._43 = 0.0f, ._44 = 1.0f
-    };
-    return m;
-}
-
-static inline mat4 mat4_make(float f11, float f12, float f13, float f14,
-                             float f21, float f22, float f23, float f24,
-                             float f31, float f32, float f33, float f34,
-                             float f41, float f42, float f43, float f44) {
-    mat4 m = {
-        ._11 = f11, ._12 = f12, ._13 = f13, ._14 = f14,
-        ._21 = f21, ._22 = f22, ._23 = f23, ._24 = f24,
-        ._31 = f31, ._32 = f32, ._33 = f33, ._34 = f34,
-        ._41 = f41, ._42 = f42, ._43 = f43, ._44 = f44
-    };
-    return m;
-}
-
-static inline float *mat4_row(mat4 *m, int row) {
-    return &m->asArray[row * 4];
-}
-
-static inline const float *mat4_row_const(const mat4 *m, int row) {
-    return &m->asArray[row * 4];
-}
+/* mat4 helpers */
+mat4 mat4_identity(void);
+mat4 mat4_make(float f11, float f12, float f13, float f14,
+               float f21, float f22, float f23, float f24,
+               float f31, float f32, float f33, float f34,
+               float f41, float f42, float f43, float f44);
+float       *mat4_row(mat4 *m, int row);
+const float *mat4_row_const(const mat4 *m, int row);
 
 /* ============================================================================
  *  Extras: comparisons and printing helpers
