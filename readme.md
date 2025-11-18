@@ -8,6 +8,7 @@ The project is designed as a small but serious playground for:
 - A Cyclone-style physics core with configurable precision
 - Vector / matrix math utilities
 - Polygon and polynomial modules for computational geometry and numerical experiments
+- A C-based numerical calculus library inspired by TAOCP Vol. 2 + Numerical Recipes
 - CI/CD pipelines (build, Pages, release zips, CodeQL, dependency review)
 
 ---
@@ -18,7 +19,7 @@ The project is designed as a small but serious playground for:
 - **Single CMake-based toolchain** that works for both WASM and native builds
 - Easy to integrate into **CI/CD** (artifacts, GitHub Pages, Release zips)
 - **Serious C layout** while staying small and hackable
-- Serve as a **sandbox** for graphics, math, and physics experiments (Pong, polygon demos, etc.)
+- Serve as a **sandbox** for graphics, math, and physics experiments (Pong, polygon demos, numerical experiments, etc.)
 
 ---
 
@@ -38,19 +39,23 @@ Top-level:
   - `codeql.yml` – CodeQL security analysis (C/C++)
   - `dependency-review.yml` – GitHub Dependency Review
 
+---
+
+### Core game / graphics project
+
 Core headers (under `include/testProject/`):
 
-- `precision.h`
+- `precision.h`  
   - Defines the `real` type and wrapper functions (`real_sqrt`, `real_sin`, etc.).
   - Allows swapping precision modes for the physics core.
 
-- `core.h`
+- `core.h`  
   - Cyclone-style physics core utilities:
     - 3D vectors, matrices, quaternions
     - Transforms and basic rigid-body math helpers
   - Intended foundation for future physics-driven gameplay.
 
-- `vectors.h`
+- `vectors.h`  
   - 2D/3D vector types (`vec2`, `vec3`, `vec4`) and ops:
     - add/subtract, scalar multiply, dot product
     - magnitude / normalization
@@ -58,7 +63,7 @@ Core headers (under `include/testProject/`):
     - angle between vectors
     - projection / perpendicular / reflection
 
-- `matrices.h`
+- `matrices.h`  
   - 2×2, 3×3, 4×4 matrices:
     - row-major layout
     - identity / multiplication
@@ -66,7 +71,7 @@ Core headers (under `include/testProject/`):
     - projection / orthographic matrices
   - Helpers to bridge into WebGL-friendly float arrays.
 
-- `polygon.h`
+- `polygon.h`  
   - Dynamic polygon structure:
     - manage vertices
     - translate / rotate / scale
@@ -74,47 +79,158 @@ Core headers (under `include/testProject/`):
     - export flat float arrays for WebGL buffers
   - Used by the WebGL renderer for regular-ngon demos (e.g., moving hexagon).
 
-- `polynomial.h`
+- `polynomial.h`  
   - Polynomial representation & operations:
     - construct polynomials
     - evaluate `p(x)`
     - add / multiply
   - Useful for curve definitions, animation easing, or general math experiments.
 
-- `render.h`
+- `render.h`  
   - Declares WebGL-facing entry points:
     - `void initWebGL(void);`
     - `void startMainLoop(void);`
   - These are exported to JavaScript via Emscripten and called from `index.html`.
 
-- `module.h`
+- `module.h`  
   - Example Emscripten-exported function `myFunction` to demonstrate JS ↔ C interop.
 
 Implementation files (under `src/`):
 
-- `main.c`
+- `main.c`  
   - Entry point for the application.
   - Sets up core state and (for WASM builds) delegates to `initWebGL()` / `startMainLoop()`.
 
-- `core.c`, `precision.c`
+- `core.c`, `precision.c`  
   - Implement parts of the Cyclone-style physics and precision helpers.
 
-- `vectors.c`, `matrices.c`
+- `vectors.c`, `matrices.c`  
   - Implement the vector and matrix operations declared in the headers.
 
-- `polygon.c`, `polynomial.c`
+- `polygon.c`, `polynomial.c`  
   - Implement polygon management and polynomial math.
 
-- `render.c`
+- `render.c`  
   - **WASM-only** renderer (compiled only when using Emscripten):
     - Initializes WebGL2 context via bindings from `index.html`
     - Builds polygon geometry, uploads vertex buffers
     - Compiles shaders and runs the main animation loop
 
-- `module.c`
+- `module.c`  
   - Implements the exported sample function `myFunction`.
 
 > Note: For native builds, `render.c` is excluded. Native rendering is intentionally left as “future work” – the core math & physics compiles, but there is no OpenGL/SDL/etc. renderer yet.
+
+---
+
+### Numerical Calculus Library (C)
+
+The numerical calculus library is a **modular C library** inspired by TAOCP Vol. 2 and Numerical Recipes. It is split into:
+
+- Header files under `include/mathlib/<module>/`
+- Implementation files under `src/mathlib/<module>/`
+
+Each domain has a clear header/source pairing.
+
+#### Core floating point + polynomials
+
+- Headers (`include/mathlib/core/`):
+  - `fp.h` – floating-point helpers, `Real` typedef, error metrics (`machine_epsilon`, `ulp`, `nearly_equal`, robust summation).
+  - `poly.h` – polynomial representation and evaluation; basic operations.
+
+- Sources (`src/mathlib/core/`):
+  - `fp.c` – implementation of floating-point helpers and robust summation.
+  - `poly.c` – implementation of polynomial evaluation and operations.
+
+#### Random numbers & Monte Carlo
+
+- Header (`include/mathlib/rand/`):
+  - `rand.h` – PRNG core, uniform/normal distributions, Monte Carlo helpers.
+
+- Source (`src/mathlib/rand/`):
+  - `rand.c` – implementation of RNG state, generators, and distributions.
+
+#### Interpolation & approximation
+
+- Header (`include/mathlib/interp/`):
+  - `interp.h` – 1D interpolation tables, polynomial interpolation, spline interpolation, Chebyshev-based approximation helpers.
+
+- Source (`src/mathlib/interp/`):
+  - `interp.c` – implementation of table lookup, interpolation, and Chebyshev routines.
+
+#### Differentiation & integration (diffint)
+
+- Headers (`include/mathlib/diffint/`):
+  - `deriv.h` – numerical differentiation (forward/central differences, Richardson extrapolation).
+  - `quad.h` – quadrature (trapezoid, Simpson, Romberg, Gauss–Legendre, adaptive integration).
+
+- Sources (`src/mathlib/diffint/`):
+  - `deriv.c` – implementation of derivative routines where not inlined.
+  - `quad.c` – implementation of quadrature and adaptive integration.
+
+#### Linear algebra backbone
+
+- Header (`include/mathlib/linalg/`):
+  - `linalg.h` – dense vector/matrix types, row-major storage, LU and Cholesky solves.
+
+- Source (`src/mathlib/linalg/`):
+  - `linalg.c` – implementation of factorization and solve routines.
+
+#### Nonlinear equations / root finding
+
+- Header (`include/mathlib/nonlin/`):
+  - `root.h` – scalar root-finding interfaces (bisection, Newton, Brent-style) and small-system helpers.
+
+- Source (`src/mathlib/nonlin/`):
+  - `root.c` – implementation of root finders and system solvers using `linalg`.
+
+#### Optimization
+
+- Header (`include/mathlib/optim/`):
+  - `optim.h` – 1D minimization (golden-section, Brent) and multi-dimensional minimization interfaces (e.g., conjugate gradient / quasi-Newton).
+
+- Source (`src/mathlib/optim/`):
+  - `optim.c` – implementation of line search and iterative optimization routines.
+
+#### Spectral / FFT tools
+
+- Header (`include/mathlib/spectral/`):
+  - `fft.h` – FFT interface, inverse FFT, and spectral differentiation/integration primitives.
+
+- Source (`src/mathlib/spectral/`):
+  - `fft.c` – implementation of FFT/ifft and related spectral operations.
+
+#### ODE solvers (initial value & boundary value)
+
+- Headers (`include/mathlib/ode/`):
+  - `ivp.h` – initial value problem solvers (Runge–Kutta, adaptive RK).
+  - `bvp.h` – boundary value problem scaffolding (shooting / relaxation).
+
+- Sources (`src/mathlib/ode/`):
+  - `ivp.c` – implementation of IVP time-stepping schemes.
+  - `bvp.c` – implementation of BVP shooting / relaxation helpers.
+
+#### PDE solvers
+
+- Header (`include/mathlib/pde/`):
+  - `pde.h` – simple finite-difference PDE solvers (e.g., 1D heat equation).
+
+- Source (`src/mathlib/pde/`):
+  - `pde.c` – implementation of PDE time-stepping and spatial discretization.
+
+#### Statistics & error analysis
+
+- Header (`include/mathlib/stats/`):
+  - `stats.h` – mean, variance, covariance, and simple least-squares fitting helpers.
+
+- Source (`src/mathlib/stats/`):
+  - `stats.c` – implementation of statistical routines used by Monte Carlo and error analysis.
+
+The intent is to keep these modules **plain C and reusable**:
+
+- You can link them into the WASM/WebGL demos in this repo.
+- You can link them into native test harnesses or other projects.
+- Physics/gameplay systems can depend on well-factored numerical primitives without pulling in rendering concerns.
 
 ---
 
@@ -122,10 +238,10 @@ Implementation files (under `src/`):
 
 ### Prerequisites
 
-- Emscripten SDK (emsdk)
-- CMake ≥ 3.20
-- Ninja (recommended)
-- A recent C compiler (Clang/GCC)
+* Emscripten SDK (emsdk)
+* CMake ≥ 3.20
+* Ninja (recommended)
+* A recent C compiler (Clang/GCC)
 
 ### Configure & build (WASM)
 
@@ -279,11 +395,13 @@ A few common extension points:
 
   * Extend `vectors.h` / `matrices.h` for more operations.
   * Add new components to `core.h` or additional physics modules.
+  * Implement new numerical primitives inside the math library (integration methods, ODE solvers, optimizers).
 
 * **Add new geometry demos**
 
   * Extend `polygon.c` to build different shapes or meshes.
   * Use `polynomial.c` for parametric curves or easing functions.
+  * Drive geometry using numerical routines from the math library (e.g., spline paths, Chebyshev approximations).
 
 * **Add gameplay**
 
@@ -295,4 +413,4 @@ A few common extension points:
   * Introduce a native renderer (SDL2 + OpenGL, Vulkan, etc.).
   * Wire it to the same math / physics core for parity with WASM.
 
-This repo is meant to stay small and understandable while giving you a **solid, reusable spine** for C + WASM experiments in math, physics, and rendering.
+This repo is meant to stay small and understandable while giving you a **solid, reusable spine** for C + WASM experiments in math, physics, and numerical methods.
