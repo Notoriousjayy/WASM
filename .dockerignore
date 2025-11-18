@@ -1,0 +1,5 @@
+build-wasm/
+cmake-build-*/
+*.o
+*.obj
+*.log
