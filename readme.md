@@ -1,225 +1,298 @@
 # WASM Native Game Starter
 
-Minimal C/C++ scaffold built with **CMake**, targeting **WebAssembly (Emscripten + WebGL2)** and optionally native. Ideal for prototyping graphics/game code that runs in the browser while keeping a clean, production-style CMake project.
+Minimal C-based scaffold for a WebAssembly **game / graphics / math testbed** that can also be compiled natively.
 
-<p align="left">
-  <a href="https://opensource.org/licenses/MIT"><img alt="License" src="https://img.shields.io/badge/License-MIT-green.svg"></a>
-</p>
+The project is designed as a small but serious playground for:
 
----
-
-## Why
-
-Build a **native-performance browser game** using **C/C++** compiled to **WebAssembly (WASM)**. This starter pairs **Emscripten** with **WebGL2** so you can write low-level, deterministic rendering and game logic in C/C++ and ship it to the web without rewriting in JavaScript. You keep your normal CMake workflow, and the browser becomes a high-performance runtime.
+- WebAssembly + WebGL2 rendering
+- A Cyclone-style physics core with configurable precision
+- Vector / matrix math utilities
+- Polygon and polynomial modules for computational geometry and numerical experiments
+- CI/CD pipelines (build, Pages, release zips, CodeQL, dependency review)
 
 ---
 
-## Quick Start (WASM)
+## Goals
 
-### 0) Prerequisites
-
-* CMake ≥ 3.20
-* Python 3 (for the dev server)
-* Emscripten SDK
-
-  ```bash
-  git clone https://github.com/emscripten-core/emsdk.git ~/emsdk
-  cd ~/emsdk && ./emsdk install latest && ./emsdk activate latest
-  source ~/emsdk/emsdk_env.sh
-  ```
-* (Recommended) Ninja
-
-  ```bash
-  sudo apt-get update && sudo apt-get install -y ninja-build
-  ```
-
-### 1) Configure & build (presets)
-
-```bash
-# Configure for WASM
-emcmake cmake --preset wasm-debug
-
-# Build
-cmake --build --preset wasm-debug
-```
-
-### 2) Serve locally
-
-```bash
-# Runs `python3 -m http.server` from the build dir
-cmake --build --preset wasm-debug --target serve
-```
-
-Open [http://localhost:8000/](http://localhost:8000/).
-The build emits `index.html / index.js / index.wasm` in the build directory, so your app loads at the server root.
-
-> WSL tip: the server binds to `0.0.0.0`, so you can open the URL from Windows too.
-
----
-
-## Features
-
-* **CMake-only workflow**: no bespoke shell scripts required.
-* **WebGL2** rendering via Emscripten HTML5 APIs.
-* **Custom HTML shell (optional)** with a single `{{{ SCRIPT }}}` placeholder.
-* **Tiny runtime hook**: initializes WebGL and starts a main loop.
-* **Exported function** `myFunction()` callable from DevTools:
-
-  ```js
-  Module.ccall('myFunction', null, [], []);
-  ```
-
----
-
-## Build Matrix
-
-### With presets (recommended)
-
-```bash
-# WASM (Debug)
-emcmake cmake --preset wasm-debug
-cmake --build --preset wasm-debug
-cmake --build --preset wasm-debug --target serve
-```
-
-### Without presets
-
-```bash
-emcmake cmake -S . -B build-wasm -G Ninja -DCMAKE_BUILD_TYPE=Debug
-cmake --build build-wasm
-(cd build-wasm && python3 -m http.server 8000)
-```
-
-> Native builds: `src/render.c` is WebGL2/Emscripten-only. For native, add a `render_native.c` (e.g., GLFW/SDL) and wire it in CMake for non-Emscripten targets.
-
----
-
-## Configuration
-
-CMake cache variables:
-
-| Option / Var      |  Default  | Purpose                                                   |
-| ----------------- | :-------: | --------------------------------------------------------- |
-| `BUILD_WASM_HTML` |    `ON`   | Use custom HTML shell if present, else Emscripten default |
-| `SERVE_PORT`      |   `8000`  | Port for `serve` target                                   |
-| `SERVE_HOST`      | `0.0.0.0` | Bind address for `serve` target                           |
-
-Override at configure time:
-
-```bash
-emcmake cmake --preset wasm-debug -DSERVE_PORT=5173 -DSERVE_HOST=127.0.0.1
-```
-
-### Custom HTML Shell
-
-If `html_template/index.html` exists, it is used automatically and must contain:
-
-```html
-{{{ SCRIPT }}}
-```
-
-You can optionally add `html_template/init_runtime.js` to place your `Module.onRuntimeInitialized` logic outside the HTML.
+- **Clean split** between “core logic” and “rendering”
+- **Single CMake-based toolchain** that works for both WASM and native builds
+- Easy to integrate into **CI/CD** (artifacts, GitHub Pages, Release zips)
+- **Serious C layout** while staying small and hackable
+- Serve as a **sandbox** for graphics, math, and physics experiments (Pong, polygon demos, etc.)
 
 ---
 
 ## Project Layout
 
+Top-level:
+
+- `CMakeLists.txt` – project definition, targets, and Emscripten-specific options
+- `CMakePresets.json` – presets for `wasm-debug` and `native-debug`
+- `Dockerfile` – multi-stage build (Emscripten builder + nginx static host)
+- `package.json` – optional Node dev servers (`http-server`, `live-server`)
+- `html_template/index.html` – custom Emscripten HTML shell for WebGL2
+- `.github/workflows/` – CI/CD pipelines
+  - `build-wasm.yml` – build & upload WASM artifacts on push/PR
+  - `pages.yml` – deploy to GitHub Pages from `main`
+  - `release.yml` – build and zip release (`pong-wasm.zip`) on tags
+  - `codeql.yml` – CodeQL security analysis (C/C++)
+  - `dependency-review.yml` – GitHub Dependency Review
+
+Core headers (under `include/testProject/`):
+
+- `precision.h`
+  - Defines the `real` type and wrapper functions (`real_sqrt`, `real_sin`, etc.).
+  - Allows swapping precision modes for the physics core.
+
+- `core.h`
+  - Cyclone-style physics core utilities:
+    - 3D vectors, matrices, quaternions
+    - Transforms and basic rigid-body math helpers
+  - Intended foundation for future physics-driven gameplay.
+
+- `vectors.h`
+  - 2D/3D vector types (`vec2`, `vec3`, `vec4`) and ops:
+    - add/subtract, scalar multiply, dot product
+    - magnitude / normalization
+    - cross product (3D)
+    - angle between vectors
+    - projection / perpendicular / reflection
+
+- `matrices.h`
+  - 2×2, 3×3, 4×4 matrices:
+    - row-major layout
+    - identity / multiplication
+    - transform creation (translate/rotate/scale)
+    - projection / orthographic matrices
+  - Helpers to bridge into WebGL-friendly float arrays.
+
+- `polygon.h`
+  - Dynamic polygon structure:
+    - manage vertices
+    - translate / rotate / scale
+    - compute perimeter
+    - export flat float arrays for WebGL buffers
+  - Used by the WebGL renderer for regular-ngon demos (e.g., moving hexagon).
+
+- `polynomial.h`
+  - Polynomial representation & operations:
+    - construct polynomials
+    - evaluate `p(x)`
+    - add / multiply
+  - Useful for curve definitions, animation easing, or general math experiments.
+
+- `render.h`
+  - Declares WebGL-facing entry points:
+    - `void initWebGL(void);`
+    - `void startMainLoop(void);`
+  - These are exported to JavaScript via Emscripten and called from `index.html`.
+
+- `module.h`
+  - Example Emscripten-exported function `myFunction` to demonstrate JS ↔ C interop.
+
+Implementation files (under `src/`):
+
+- `main.c`
+  - Entry point for the application.
+  - Sets up core state and (for WASM builds) delegates to `initWebGL()` / `startMainLoop()`.
+
+- `core.c`, `precision.c`
+  - Implement parts of the Cyclone-style physics and precision helpers.
+
+- `vectors.c`, `matrices.c`
+  - Implement the vector and matrix operations declared in the headers.
+
+- `polygon.c`, `polynomial.c`
+  - Implement polygon management and polynomial math.
+
+- `render.c`
+  - **WASM-only** renderer (compiled only when using Emscripten):
+    - Initializes WebGL2 context via bindings from `index.html`
+    - Builds polygon geometry, uploads vertex buffers
+    - Compiles shaders and runs the main animation loop
+
+- `module.c`
+  - Implements the exported sample function `myFunction`.
+
+> Note: For native builds, `render.c` is excluded. Native rendering is intentionally left as “future work” – the core math & physics compiles, but there is no OpenGL/SDL/etc. renderer yet.
+
+---
+
+## Build & Run (WASM via CMake)
+
+### Prerequisites
+
+- Emscripten SDK (emsdk)
+- CMake ≥ 3.20
+- Ninja (recommended)
+- A recent C compiler (Clang/GCC)
+
+### Configure & build (WASM)
+
+From the repo root:
+
+```bash
+# Configure (WASM debug)
+emcmake cmake --preset wasm-debug
+
+# Build
+cmake --build --preset wasm-debug -j2
+````
+
+Artifacts will be in `build-wasm/`:
+
+* `index.html`
+* `index.js`
+* `index.wasm`
+* Optional `index.data` (if used)
+
+### Serve locally
+
+You have multiple options:
+
+1. **CMake + emrun (configured in CMakeLists):**
+
+   ```bash
+   cmake --build --preset wasm-debug --target serve
+   ```
+
+   This runs:
+
+   ```bash
+   emrun --no_browser --port 8000 build-wasm/index.html
+   ```
+
+   Then open: `http://localhost:8000/`.
+
+2. **Node dev servers (from `package.json`):**
+
+   ```bash
+   npm install
+   npx http-server build-wasm -p 8000
+   # or
+   npx live-server build-wasm
+   ```
+
+3. **Docker (see next section)**
+
+---
+
+## Build & Run with Docker
+
+The repo ships with a multi-stage Dockerfile that:
+
+1. Uses `emscripten/emsdk` to build the WASM artifacts.
+2. Copies the contents of `build-wasm/` into an `nginx:alpine` image.
+
+Build and run:
+
+```bash
+# Build the image
+docker build -t wasm-game .
+
+# Run the container
+docker run --rm -p 8080:80 wasm-game
 ```
-.
-├─ CMakeLists.txt
-├─ CMakePresets.json         # presets for wasm-debug, etc.
-├─ include/
-│  └─ testProject/
-│     ├─ render.h
-│     └─ module.h
-├─ src/
-│  ├─ main.c                 # entry point
-│  ├─ render.c               # WebGL2 (Emscripten) renderer
-│  └─ module.c               # EMSCRIPTEN_KEEPALIVE myFunction()
-└─ html_template/            # (optional) custom shell / post-js
-   └─ index.html
+
+Then open: `http://localhost:8080/`.
+
+This is useful for:
+
+* Quickly sharing the build without local toolchain setup.
+* Running the project behind a standard nginx static host.
+* Serving as a starting point for container-based deployment (e.g., GHCR + k8s).
+
+> CI workflows currently build **directly with Emscripten on the runner** and do not use this Dockerfile yet. You can integrate Docker into the workflows later if you prefer containerized builds.
+
+---
+
+## Native Build (Experimental)
+
+There is a `native-debug` preset for compiling the core without Emscripten:
+
+```bash
+cmake --preset native-debug
+cmake --build --preset native-debug -j2
 ```
 
----
+This will:
 
-## API Reference
+* Build the **core math / physics / utility modules** as a native binary.
+* **Not** compile `render.c` (no native renderer is wired up yet).
 
-### `int initWebGL(void)`
+Use this if you want to:
 
-Creates a WebGL2 context on `<canvas id="canvas">`.
-**Returns**: `1` on success, `0` on failure.
-
-### `void startMainLoop(void)`
-
-Starts the frame loop (clears to a solid color by default).
-
-### `void myFunction(void)`
-
-Tagged `EMSCRIPTEN_KEEPALIVE`. Call from JS:
-
-```js
-Module.ccall('myFunction', null, [], []);
-```
+* Run unit tests against the math/physics modules.
+* Prototype native backends (e.g., SDL2 + OpenGL).
 
 ---
 
-## CI/CD
+## CI/CD Overview
 
-This repository includes GitHub Actions workflows:
+All workflows live under `.github/workflows/`:
 
-* **Build (WASM C/C++)**: compiles the WASM artifact on push/PR.
-* **CodeQL (C/C++)**: static analysis on schedule and PRs.
-* **Dependency Review**: flags vulnerable dependencies in PRs.
-* **Deploy (GitHub Pages)**: builds the site and publishes to Pages.
-* **Release**: on tags `v*.*.*`, builds artifacts and attaches them to a GitHub Release.
+* **Build (WASM) – `build-wasm.yml`**
 
-> Ensure **GitHub Pages** is enabled in repository settings if you plan to deploy.
+  * Trigger: push / pull_request to `main`.
+  * Installs Emscripten, caches build cache.
+  * Configures and builds using `wasm-debug` preset.
+  * Uploads the `build-wasm` artifacts.
 
----
+* **GitHub Pages – `pages.yml`**
 
-## Roadmap
+  * Trigger: push to `main`.
+  * Builds with Emscripten.
+  * Copies `build-wasm/index.*` into a `site/` dir.
+  * Uses `actions/deploy-pages` to publish to GitHub Pages.
 
-| Area      | Item                                        | Notes                                     |
-| --------- | ------------------------------------------- | ----------------------------------------- |
-| Rendering | Fragment shader color/gradient paramization | Uniforms + simple UI to tweak             |
-| Input     | Keyboard/mouse and touch handling           | Emscripten HTML5 callbacks                |
-| Timing    | Fixed-timestep update + variable render     | Deterministic game logic                  |
-| Audio     | Minimal SFX pipeline                        | WebAudio interop layer                    |
-| Assets    | Basic packer/loader                         | `.data` packaging with CMake step         |
-| Gameplay  | Collision primitives                        | Circle/box first, then SAT                |
-| Arch      | Scene/state management                      | Pushdown automaton or ECS-lite            |
-| Native    | GLFW/SDL path                               | `render_native.c` + desktop build preset  |
-| Testing   | Headless render sanity checks               | Offscreen canvas/CI probe                 |
-| CI/CD     | Pages smoke test                            | `curl`/`playwright` ping of deployed site |
+* **Release – `release.yml`**
 
----
+  * Trigger: tags matching `v*.*.*`.
+  * Builds with Emscripten.
+  * Packages `index.html/js/wasm[/data]` into `release/pong-wasm.zip`.
+  * Creates a GitHub Release with the zip attached.
 
-## Troubleshooting
+* **CodeQL – `codeql.yml`**
 
-* **Ninja not found**
-  `CMake was unable to find a build program corresponding to "Ninja"`
-  → `sudo apt-get install -y ninja-build` or use `-G "Unix Makefiles"`.
+  * Trigger: push, PRs to `main`, scheduled weekly.
+  * Builds the project using Emscripten and runs CodeQL analysis for C/C++.
 
-* **Custom shell error**: `HTML shell must contain {{{ SCRIPT }}}`
-  → Add the placeholder to `html_template/index.html`, or use the default shell.
+* **Dependency Review – `dependency-review.yml`**
 
-* **Black/blank canvas**
+  * Trigger: PR opened / synchronized / reopened.
+  * Runs GitHub’s dependency review action.
 
-  * Check DevTools console for WebGL errors.
-  * Ensure the browser supports **WebGL2** and **WASM**.
-  * Verify `initWebGL()` returns `1`.
+This layout gives you:
 
-* **WSL cannot reach server**
-  Use `-DSERVE_HOST=0.0.0.0` and open `http://localhost:<port>` from Windows.
+* Automatic build validation on every push/PR.
+* Continuous deployment to GitHub Pages from `main`.
+* Tagged releases that bundle the static WASM site.
+* Security analysis and supply-chain checks.
 
 ---
 
-## Contributing
+## Extending the Project
 
-PRs welcome. Please open an issue first for significant changes.
+A few common extension points:
 
----
+* **Add new math / physics features**
 
-## License
+  * Extend `vectors.h` / `matrices.h` for more operations.
+  * Add new components to `core.h` or additional physics modules.
 
-[MIT](https://opensource.org/licenses/MIT)
+* **Add new geometry demos**
+
+  * Extend `polygon.c` to build different shapes or meshes.
+  * Use `polynomial.c` for parametric curves or easing functions.
+
+* **Add gameplay**
+
+  * Build a game-specific state machine in `main.c` or new modules.
+  * Drive rendering via `render.c` using the existing WebGL2 pipeline.
+
+* **Improve native support**
+
+  * Introduce a native renderer (SDL2 + OpenGL, Vulkan, etc.).
+  * Wire it to the same math / physics core for parity with WASM.
+
+This repo is meant to stay small and understandable while giving you a **solid, reusable spine** for C + WASM experiments in math, physics, and rendering.
