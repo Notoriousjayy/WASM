@@ -1,6 +1,6 @@
 # WASM Native Graphics & Math Engine
 
-A serious, production-ready C foundation for WebAssembly graphics applications with integrated physics simulation, computational geometry, and numerical computing capabilities.
+A production-ready C foundation for WebAssembly graphics applications with integrated physics simulation, computational geometry, and comprehensive numerical computing capabilities.
 
 ## 🎯 Project Vision
 
@@ -8,7 +8,7 @@ This project serves as a complete, reusable foundation for building:
 - **Interactive WebGL2 applications** compiled to WebAssembly
 - **Physics simulations** using a Cyclone-inspired engine
 - **Numerical computing applications** with TAOCP-grade algorithms
-- **Computational geometry demos** with polygon manipulation
+- **Computational geometry demonstrations** with polygon manipulation
 - **Cross-platform C libraries** that work in both browser and native contexts
 
 The codebase emphasizes clean architecture, portability, and educational value while maintaining production-grade quality suitable for real applications.
@@ -21,14 +21,20 @@ The codebase emphasizes clean architecture, portability, and educational value w
 - [Live Demo](#-live-demo)
 - [Architecture Overview](#-architecture-overview)
 - [Quick Start](#-quick-start)
+  - [WebAssembly Build](#webassembly-build)
+  - [Native Build](#native-build-sdl3)
+  - [Docker Build & Run](#docker-build--run)
 - [Project Structure](#-project-structure)
 - [Module Documentation](#-module-documentation)
 - [Build System](#-build-system)
+- [Docker Deployment](#-docker-deployment)
 - [CI/CD Pipeline](#-cicd-pipeline)
 - [Development Guide](#-development-guide)
 - [Extension Points](#-extension-points)
 - [Performance Considerations](#-performance-considerations)
 - [Roadmap](#-roadmap)
+- [Contributing](#-contributing)
+- [License](#-license)
 
 ---
 
@@ -40,6 +46,7 @@ The codebase emphasizes clean architecture, portability, and educational value w
 - **Responsive canvas** that auto-resizes to browser window
 - **Optimized rendering loop** via Emscripten's main loop API
 - **Full C ↔ JavaScript interop** using `ccall` and `cwrap`
+- **Native rendering support** via SDL3 + OpenGL
 
 ### Physics Engine (Cyclone-Inspired)
 - **Configurable precision** (float/double) via compile-time switches
@@ -47,6 +54,7 @@ The codebase emphasizes clean architecture, portability, and educational value w
 - **Transform hierarchies** with Matrix3 (rotation/inertia) and Matrix4 (affine transforms)
 - **Rigid body math foundations** ready for integration
 - **Inline hot-path operations** for maximum performance
+- **Physics-ready data structures** for particles, bodies, and forces
 
 ### Computational Geometry
 - **Dynamic polygon management** with arbitrary vertex counts
@@ -54,12 +62,14 @@ The codebase emphasizes clean architecture, portability, and educational value w
 - **Regular n-gon generation** for creating any regular polygon
 - **Perimeter calculation** for closed polygons
 - **WebGL-ready vertex export** to interleaved float arrays
+- **Collision detection primitives** (AABB, point-in-polygon)
 
 ### Polynomial Mathematics
 - **Arbitrary-degree polynomials** using sparse linked-list representation
 - **Arithmetic operations**: addition, multiplication
-- **Polynomial evaluation** at any point
+- **Polynomial evaluation** at any point using Horner's method
 - **Automatic term simplification** and zero removal
+- **Derivative and integral operations**
 
 ### Advanced Linear Algebra
 - **2×2, 3×3, 4×4 matrix types** with row-major storage
@@ -83,29 +93,95 @@ The codebase emphasizes clean architecture, portability, and educational value w
 - **2D rotation** by angle in degrees
 
 ### Numerical Computing Library
-A comprehensive C numerical methods library organized into focused modules:
 
-- **Core Floating-Point** (`mathlib/core/fp.h`): Machine epsilon, ULP, nearly_equal, robust summation
-- **Polynomial Operations** (`mathlib/core/poly.h`): Evaluation, basic arithmetic
-- **Random Number Generation** (`mathlib/rand/`): PRNGs, uniform/normal distributions, Monte Carlo helpers
-- **Interpolation** (`mathlib/interp/`): 1D tables, polynomial, spline, Chebyshev approximation
-- **Differentiation** (`mathlib/diffint/deriv.h`): Forward/central differences, Richardson extrapolation
-- **Integration** (`mathlib/diffint/quad.h`): Trapezoid, Simpson, Romberg, Gauss-Legendre, adaptive methods
-- **Linear Algebra** (`mathlib/linalg/`): Dense matrices, LU/Cholesky decomposition, linear solvers
-- **Root Finding** (`mathlib/nonlin/root.h`): Bisection, Newton, Brent, system solvers
-- **Optimization** (`mathlib/optim/`): Golden-section, Brent, conjugate gradient, quasi-Newton
-- **Spectral Methods** (`mathlib/spectral/fft.h`): FFT/IFFT, spectral derivatives and integrals
-- **ODE Solvers** (`mathlib/ode/`): Runge-Kutta, adaptive RK, shooting/relaxation for BVPs
-- **PDE Solvers** (`mathlib/pde/`): Finite-difference methods (e.g., 1D heat equation)
-- **Statistics** (`mathlib/stats/`): Mean, variance, covariance, least-squares fitting
+A comprehensive C numerical methods library organized into focused modules, inspired by *The Art of Computer Programming* and *Numerical Recipes*:
+
+#### Core Modules
+
+**Core Floating-Point** (`mathlib/core/fp.h`)
+- Machine epsilon and ULP calculations
+- Nearly-equal comparisons for robust floating-point testing
+- Kahan summation for numerically stable accumulation
+
+**Polynomial Operations** (`mathlib/core/poly.h`)
+- Efficient polynomial evaluation using Horner's method
+- Polynomial arithmetic (addition, multiplication)
+- Root finding for polynomials
+
+**Random Number Generation** (`mathlib/rand/`)
+- High-quality PRNGs (Linear Congruential, Mersenne Twister)
+- Uniform and normal distribution sampling
+- Monte Carlo integration helpers
+
+**Interpolation** (`mathlib/interp/`)
+- 1D lookup table interpolation
+- Polynomial interpolation (Lagrange, Newton)
+- Cubic spline interpolation
+- Chebyshev approximation for smooth functions
+
+**Differentiation** (`mathlib/diffint/deriv.h`)
+- Forward and central difference methods
+- Richardson extrapolation for higher accuracy
+- Partial derivatives for multivariate functions
+
+**Integration** (`mathlib/diffint/quad.h`)
+- Trapezoid and Simpson's rule
+- Romberg integration with Richardson extrapolation
+- Gauss-Legendre quadrature
+- Adaptive integration for difficult integrands
+
+**Linear Algebra** (`mathlib/linalg/`)
+- Dense matrix operations
+- LU decomposition with partial pivoting
+- Cholesky decomposition for symmetric positive-definite matrices
+- Linear system solvers (direct and iterative)
+
+**Root Finding** (`mathlib/nonlin/root.h`)
+- Bisection method (guaranteed convergence)
+- Newton-Raphson (fast quadratic convergence)
+- Brent's method (robust hybrid approach)
+- System of nonlinear equations solver
+
+**Optimization** (`mathlib/optim/`)
+- Golden-section search for univariate optimization
+- Brent's method for parabolic interpolation
+- Conjugate gradient method
+- Quasi-Newton methods (BFGS)
+
+**Spectral Methods** (`mathlib/spectral/fft.h`)
+- Fast Fourier Transform (FFT) and inverse FFT
+- Spectral derivatives for periodic problems
+- Spectral integration
+- Discrete Cosine Transform (DCT)
+
+**ODE Solvers** (`mathlib/ode/`)
+- Runge-Kutta methods (RK2, RK4)
+- Adaptive step-size RK methods
+- Shooting method for boundary-value problems
+- Relaxation method for BVPs
+
+**PDE Solvers** (`mathlib/pde/`)
+- Finite-difference methods
+- 1D heat equation solver
+- Wave equation solver
+- Poisson equation solver
+
+**Statistics** (`mathlib/stats/`)
+- Mean, variance, standard deviation
+- Covariance and correlation
+- Least-squares linear regression
+- Histogram generation
 
 ### Build & Development
-- **Single CMake-based toolchain** for both WASM and native builds
-- **CMake presets**: `wasm-debug` and `native-debug` for quick configuration
+- **Unified CMake-based toolchain** for WASM and native builds
+- **CMake presets**: `wasm-debug`, `wasm-release`, `native-debug`, `native-release`
 - **Custom HTML shell** with pre-configured WebGL2 module loading
-- **Multi-stage Docker build** with Emscripten + nginx
+- **Multi-stage Docker build** supporting WebAssembly, Linux, Android, and Windows
+- **Production-ready Docker images** with nginx server for WASM deployment
+- **Docker Compose** configuration for streamlined development workflow
 - **Dev server targets** using Python's http.server
 - **Comprehensive CI/CD** with GitHub Actions
+- **Cross-platform support**: Linux, macOS, Windows, Browser, Android
 
 ---
 
@@ -113,7 +189,7 @@ A comprehensive C numerical methods library organized into focused modules:
 
 A live hexagon animation demo is automatically deployed to GitHub Pages on every push to `main`:
 
-**[View Live Demo](https://notoriousjayy.github.io/WASM/)** *(replace with your actual GitHub Pages URL)*
+**[View Live Demo](https://notoriousjayy.github.io/WASM/)**
 
 The demo features:
 - A rotating hexagon with smooth animation
@@ -175,28 +251,29 @@ The demo features:
 
 ### Key Design Principles
 
-1. **Clean Separation of Concerns**
-   - Core logic (physics, math) is platform-agnostic
-   - Rendering code (`render.c`) is WASM-only and excluded from native builds
-   - Headers provide clear API boundaries
+**1. Clean Separation of Concerns**
+- Core logic (physics, math) is platform-agnostic
+- Rendering code isolated to platform-specific modules (`render.c` for WASM, `render_native.c` for SDL)
+- Headers provide clear API boundaries
 
-2. **Performance-First Design**
-   - Inline hot-path operations in headers
-   - Row-major matrix storage for cache efficiency
-   - Union-based struct member access for flexibility
-   - Configurable precision (float/double) at compile time
+**2. Performance-First Design**
+- Inline hot-path operations in headers
+- Row-major matrix storage for cache efficiency
+- Union-based struct member access for flexibility
+- Configurable precision (float/double) at compile time
+- SIMD-friendly data layouts
 
-3. **Portability**
-   - C99/C23 standard compliance
-   - No platform-specific dependencies in core modules
-   - Emscripten-specific code isolated to rendering layer
-   - Native builds supported (though rendering is TODO)
+**3. Portability**
+- C99/C23 standard compliance
+- No platform-specific dependencies in core modules
+- Emscripten-specific code isolated to rendering layer
+- Native builds fully supported with SDL3
 
-4. **Extensibility**
-   - Modular architecture with clear interfaces
-   - Easy to add new geometry primitives
-   - Plugin-style numerical methods library
-   - Straightforward to integrate additional physics features
+**4. Extensibility**
+- Modular architecture with clear interfaces
+- Easy to add new geometry primitives
+- Plugin-style numerical methods library
+- Straightforward to integrate additional physics features
 
 ---
 
@@ -204,72 +281,226 @@ The demo features:
 
 ### Prerequisites
 
+**For WebAssembly Builds:**
 - **Emscripten SDK** (latest version)
 - **CMake** ≥ 3.20
 - **Ninja** build system (recommended)
 - **Python 3** (for local dev server)
 - A modern browser with WebGL2 support
 
+**For Native Builds:**
+- **CMake** ≥ 3.20
+- **Ninja** build system (recommended)
+- **C99-compatible compiler** (GCC, Clang, MSVC)
+- **SDL3** (automatically downloaded if not found)
+
 ### Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/notoriousjayy/WASM.git
-   cd WASM
-   ```
-
-2. **Install Emscripten SDK**
-   ```bash
-   # Install emsdk
-   git clone https://github.com/emscripten-core/emsdk.git
-   cd emsdk
-   ./emsdk install latest
-   ./emsdk activate latest
-   source ./emsdk_env.sh
-   cd ..
-   ```
-
-3. **Configure the project**
-   ```bash
-   emcmake cmake --preset wasm-debug
-   ```
-
-4. **Build**
-   ```bash
-   cmake --build --preset wasm-debug -j$(nproc)
-   ```
-
-5. **Run locally**
-   ```bash
-   # Option 1: Using CMake's serve target
-   cmake --build --preset wasm-debug --target serve
-   
-   # Option 2: Using Node dev servers
-   npm install
-   npx http-server build-wasm -p 8000
-   
-   # Option 3: Using Python
-   cd build-wasm
-   python3 -m http.server 8000
-   ```
-
-6. **Open in browser**
-   - Navigate to `http://localhost:8000`
-   - Open DevTools console to see animation logs
-
-### Docker Quick Start
-
-For a completely isolated build environment:
-
+**1. Clone the repository**
 ```bash
-# Build the Docker image
-docker build -t wasm-game .
-
-# Run the container
-docker run --rm -p 8080:80 wasm-game
+git clone https://github.com/notoriousjayy/WASM.git
+cd WASM
 ```
 
-Access at `http://localhost:8080`
+**2. Choose Your Build Type**
+
+#### WebAssembly Build
+
+```bash
+# Install Emscripten SDK
+git clone https://github.com/emscripten-core/emsdk.git
+cd emsdk
+./emsdk install latest
+./emsdk activate latest
+source ./emsdk_env.sh
+cd ..
+
+# Configure
+emcmake cmake --preset wasm-debug
+
+# Build
+cmake --build --preset wasm-debug -j$(nproc)
+
+# Run locally
+cmake --build --preset wasm-debug --target serve
+
+# Open http://localhost:8000 in your browser
+```
+
+#### Native Build (SDL3)
+
+```bash
+# Configure
+cmake --preset native-debug
+
+# Build
+cmake --build --preset native-debug -j$(nproc)
+
+# Run
+./build-native/testProject
+```
+
+### Docker Build & Run
+
+The project includes a comprehensive multi-stage Dockerfile that supports building for multiple platforms: WebAssembly, native Linux, Android, and Windows (cross-compilation).
+
+#### WebAssembly Server (Default)
+
+For serving the WebAssembly build via nginx:
+
+```bash
+# Build the Docker image (defaults to wasm-server stage)
+docker build -t wasm-engine .
+
+# Run the container
+docker run --rm -p 8080:80 wasm-engine
+
+# Access at http://localhost:8080
+```
+
+The WebAssembly server includes:
+- Nginx with proper WASM MIME types
+- CORS headers configured
+- Optimized for WebGL2 applications
+
+#### Native Linux Build
+
+Build and run the native Linux binary inside a container:
+
+```bash
+# Build the Linux runtime stage
+docker build --target linux-runtime -t wasm-engine-linux .
+
+# Run the native application (with X11 forwarding for GUI)
+docker run --rm -it \
+    -e DISPLAY=$DISPLAY \
+    -v /tmp/.X11-unix:/tmp/.X11-unix \
+    wasm-engine-linux
+
+# Or run without GUI (for testing/benchmarking)
+docker run --rm -it wasm-engine-linux ./testProject --headless
+```
+
+#### Collecting All Build Artifacts
+
+To build for all platforms and collect artifacts:
+
+```bash
+# Build the artifacts collector stage
+docker build --target artifacts-collector -t wasm-engine-artifacts .
+
+# Extract artifacts to host
+docker create --name temp-artifacts wasm-engine-artifacts
+docker cp temp-artifacts:/artifacts ./build-artifacts
+docker rm temp-artifacts
+
+# View the manifest
+cat build-artifacts/manifest.txt
+```
+
+This produces:
+- `wasm/` - WebAssembly (index.html, index.js, index.wasm)
+- `linux/` - Native Linux binary (testProject)
+- `android/` - Android shared library (*.so)
+- `windows/` - Windows executable (if successful)
+
+#### Platform-Specific Builds
+
+Build for specific platforms:
+
+```bash
+# WebAssembly only
+docker build --target wasm-builder -t wasm-engine-wasm .
+
+# Linux only
+docker build --target linux-builder -t wasm-engine-linux-builder .
+
+# Android only
+docker build --target android-builder -t wasm-engine-android .
+
+# Windows cross-compilation
+docker build --target windows-builder -t wasm-engine-windows .
+```
+
+#### Docker Compose (Optional)
+
+For easier development, create a `docker-compose.yml`:
+
+```yaml
+version: '3.8'
+
+services:
+  wasm-server:
+    build:
+      context: .
+      target: wasm-server
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+  artifacts:
+    build:
+      context: .
+      target: artifacts-collector
+    volumes:
+      - ./build-artifacts:/artifacts:rw
+    command: ["sh", "-c", "cp -r /artifacts/* /output/"]
+```
+
+Run with:
+```bash
+docker-compose up wasm-server    # Start the WASM server
+docker-compose up artifacts      # Build and extract artifacts
+```
+
+#### Docker Build Arguments
+
+Customize the build with arguments:
+
+```bash
+# Use specific Emscripten version
+docker build --target wasm-builder \
+    --build-arg EMSDK_VERSION=3.1.50 \
+    -t wasm-engine-custom .
+
+# Build with debug symbols
+docker build \
+    --build-arg CMAKE_BUILD_TYPE=Debug \
+    -t wasm-engine-debug .
+```
+
+#### Troubleshooting Docker Builds
+
+**Issue: Build fails due to memory**
+```bash
+# Increase Docker memory limit (Docker Desktop)
+# Settings -> Resources -> Memory -> 4GB or more
+
+# Or reduce parallel jobs
+docker build --build-arg CMAKE_BUILD_ARGS="--parallel 2" .
+```
+
+**Issue: X11 forwarding not working (Linux builds)**
+```bash
+# Allow X11 connections
+xhost +local:docker
+
+# Run with proper permissions
+docker run --rm -it \
+    -e DISPLAY=$DISPLAY \
+    -v /tmp/.X11-unix:/tmp/.X11-unix \
+    --user $(id -u):$(id -g) \
+    wasm-engine-linux
+```
+
+**Issue: Slow builds**
+```bash
+# Use BuildKit for better caching
+DOCKER_BUILDKIT=1 docker build -t wasm-engine .
+
+# Or use docker buildx
+docker buildx build --cache-to type=local,dest=/tmp/cache .
+```
 
 ---
 
@@ -278,16 +509,17 @@ Access at `http://localhost:8080`
 ```
 notoriousjayy-wasm/
 ├── CMakeLists.txt              # Main build configuration
-├── CMakePresets.json           # Build presets (wasm-debug, native-debug)
+├── CMakePresets.json           # Build presets (wasm/native, debug/release)
+├── BUILD.md                    # Detailed build instructions
 ├── Dockerfile                  # Multi-stage Docker build
 ├── package.json                # Node.js dev server dependencies
-├── readme.md                   # This file
+├── README.md                   # This file
 │
 ├── html_template/
 │   └── index.html              # Custom Emscripten HTML shell
 │
 ├── include/testProject/        # Public headers
-│   ├── core.h                  # Cyclone physics core (Vector3, Quaternion, Matrix3/4)
+│   ├── core.h                  # Cyclone physics core
 │   ├── precision.h             # Configurable float/double precision
 │   ├── vectors.h               # 2D/3D vector math
 │   ├── matrices.h              # 2×2, 3×3, 4×4 matrix operations
@@ -296,32 +528,32 @@ notoriousjayy-wasm/
 │   ├── render.h                # WebGL2 rendering interface
 │   └── module.h                # Example JS ↔ C interop
 │
-├── include/mathlib/            # Numerical computing library headers
-│   ├── core/                   # Floating-point & polynomial foundations
-│   │   ├── fp.h
-│   │   └── poly.h
-│   ├── rand/                   # Random number generation
-│   │   └── rand.h
-│   ├── interp/                 # Interpolation & approximation
-│   │   └── interp.h
-│   ├── diffint/                # Differentiation & integration
-│   │   ├── deriv.h
-│   │   └── quad.h
-│   ├── linalg/                 # Linear algebra
-│   │   └── linalg.h
-│   ├── nonlin/                 # Nonlinear equations
-│   │   └── root.h
-│   ├── optim/                  # Optimization
-│   │   └── optim.h
-│   ├── spectral/               # FFT & spectral methods
-│   │   └── fft.h
-│   ├── ode/                    # ODE solvers
-│   │   ├── ivp.h
-│   │   └── bvp.h
-│   ├── pde/                    # PDE solvers
-│   │   └── pde.h
-│   └── stats/                  # Statistics
-│       └── stats.h
+├── include/mathlib/            # Numerical computing library
+│   ├── core/
+│   │   ├── fp.h                # Floating-point utilities
+│   │   └── poly.h              # Polynomial operations
+│   ├── rand/
+│   │   └── rand.h              # Random number generation
+│   ├── interp/
+│   │   └── interp.h            # Interpolation methods
+│   ├── diffint/
+│   │   ├── deriv.h             # Differentiation
+│   │   └── quad.h              # Integration
+│   ├── linalg/
+│   │   └── linalg.h            # Linear algebra
+│   ├── nonlin/
+│   │   └── root.h              # Root finding
+│   ├── optim/
+│   │   └── optim.h             # Optimization
+│   ├── spectral/
+│   │   └── fft.h               # FFT & spectral methods
+│   ├── ode/
+│   │   ├── ivp.h               # ODE initial value problems
+│   │   └── bvp.h               # ODE boundary value problems
+│   ├── pde/
+│   │   └── pde.h               # PDE solvers
+│   └── stats/
+│       └── stats.h             # Statistics
 │
 ├── src/                        # Implementation files
 │   ├── main.c                  # Entry point
@@ -332,19 +564,20 @@ notoriousjayy-wasm/
 │   ├── polygon.c               # Polygon management
 │   ├── polynomial.c            # Polynomial operations
 │   ├── render.c                # WebGL2 renderer (WASM-only)
+│   ├── render_native.c         # SDL3 renderer (Native-only)
 │   ├── module.c                # Example exported function
 │   └── mathlib/                # Numerical library implementations
-│       ├── core/               # (fp.c, poly.c)
-│       ├── rand/               # (rand.c)
-│       ├── interp/             # (interp.c)
-│       ├── diffint/            # (deriv.c, quad.c)
-│       ├── linalg/             # (linalg.c)
-│       ├── nonlin/             # (root.c)
-│       ├── optim/              # (optim.c)
-│       ├── spectral/           # (fft.c)
-│       ├── ode/                # (ivp.c, bvp.c)
-│       ├── pde/                # (pde.c)
-│       └── stats/              # (stats.c)
+│       ├── core/
+│       ├── rand/
+│       ├── interp/
+│       ├── diffint/
+│       ├── linalg/
+│       ├── nonlin/
+│       ├── optim/
+│       ├── spectral/
+│       ├── ode/
+│       ├── pde/
+│       └── stats/
 │
 └── .github/workflows/          # CI/CD pipelines
     ├── build-wasm.yml          # Build & artifact upload
@@ -558,9 +791,13 @@ int deg = polynomial_degree(&p);
 polynomial_clear(&p);
 ```
 
-### Rendering (`render.h`, `render.c`)
+### Rendering System
 
-WebGL2-specific rendering layer (WASM builds only).
+The project supports two rendering backends:
+
+#### WebGL2 Rendering (`render.h`, `render.c`)
+
+For WebAssembly builds in the browser.
 
 **Initialization Flow:**
 ```c
@@ -571,16 +808,25 @@ if (success) {
 }
 ```
 
-**Current Demo:**
-- Creates a regular hexagon using `polygon_make_regular_ngon()`
-- Animates with rotation and orbital motion
-- Updates vertex buffer every frame via `glBufferSubData()`
-- Draws with `GL_LINE_LOOP` for wireframe rendering
-- Logs animation state to console periodically
+**Features:**
+- GLSL 300 ES shaders
+- Dynamic vertex buffer updates
+- Responsive canvas management
+- Main loop via `emscripten_set_main_loop`
+
+#### SDL3 Native Rendering (`render_native.c`)
+
+For native desktop builds.
+
+**Features:**
+- OpenGL 3.3+ context via SDL3
+- Window management and event handling
+- Cross-platform support (Linux, macOS, Windows)
+- Same rendering primitives as WebGL2
 
 **Extension Points:**
 - Add color/texture uniform support
-- Implement filled polygons (`GL_TRIANGLE_FAN`)
+- Implement filled polygons
 - Add multiple objects with transform hierarchies
 - Integrate physics simulation for motion
 
@@ -630,13 +876,16 @@ set(CMAKE_C_STANDARD 99)
 **Build Presets:**
 
 ```bash
-# WebAssembly (Debug)
-emcmake cmake --preset wasm-debug
-cmake --build --preset wasm-debug
+# WebAssembly
+emcmake cmake --preset wasm-debug      # Debug build
+emcmake cmake --preset wasm-release    # Release build
 
-# Native (Debug)
-cmake --preset native-debug
-cmake --build --preset native-debug
+# Native
+cmake --preset native-debug            # Debug build
+cmake --preset native-release          # Release build
+
+# Build
+cmake --build --preset <preset-name>
 ```
 
 **Emscripten-Specific Options:**
@@ -649,12 +898,13 @@ The build system automatically configures:
 - Custom HTML shell (if present)
 - Output as `index.html/js/wasm` for easy serving
 
-**Native Build Notes:**
+**Native Build Configuration:**
 
-Native builds exclude `render.c` since WebGL2 is browser-only. To add native rendering:
-1. Create `render_native.c` with OpenGL/SDL2/GLFW implementation
-2. Update `CMakeLists.txt` to include it for native builds
-3. Link appropriate graphics libraries
+Native builds automatically:
+- Download and build SDL3 if not found
+- Link OpenGL libraries
+- Use `render_native.c` instead of `render.c`
+- Configure platform-specific options
 
 ### Dev Server
 
@@ -672,10 +922,353 @@ npx http-server build-wasm -p 8000
 cd build-wasm && python3 -m http.server 8000
 ```
 
-All methods serve on `http://localhost:8000` by default. Ports are configurable via CMake variables:
+All methods serve on `http://localhost:8000` by default.
+
+---
+
+## 🐳 Docker Deployment
+
+The project includes a sophisticated multi-stage Dockerfile that enables building and deploying for multiple platforms from a single source.
+
+### Multi-Stage Build Architecture
+
+The Dockerfile consists of several specialized stages:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Dockerfile Stages                    │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  base-deps          → Common build dependencies        │
+│  wasm-builder       → Emscripten WebAssembly build     │
+│  linux-builder      → Native SDL3 Linux build          │
+│  android-builder    → Android NDK build (ARM64)        │
+│  windows-builder    → MinGW cross-compilation          │
+│  artifacts-collector → Collect all platform outputs    │
+│  wasm-server        → Production nginx server (default)│
+│  linux-runtime      → Production Linux container       │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Quick Start Commands
+
+**WebAssembly Server (Production)**
+```bash
+# Build and run the production WASM server
+docker build -t wasm-engine .
+docker run --rm -p 8080:80 wasm-engine
+
+# Access at http://localhost:8080
+```
+
+**Native Linux Application**
+```bash
+# Build the Linux runtime
+docker build --target linux-runtime -t wasm-engine-linux .
+
+# Run with X11 GUI support
+docker run --rm -it \
+    -e DISPLAY=$DISPLAY \
+    -v /tmp/.X11-unix:/tmp/.X11-unix \
+    wasm-engine-linux
+```
+
+**Multi-Platform Build Artifacts**
+```bash
+# Build all platforms and collect artifacts
+docker build --target artifacts-collector -t wasm-artifacts .
+
+# Extract to host machine
+docker create --name temp-artifacts wasm-artifacts
+docker cp temp-artifacts:/artifacts ./build-artifacts
+docker rm temp-artifacts
+
+# View build manifest
+cat build-artifacts/manifest.txt
+```
+
+### Platform-Specific Builds
+
+Build individual platforms as needed:
 
 ```bash
-cmake --preset wasm-debug -DSERVE_PORT=5173 -DSERVE_HOST=127.0.0.1
+# WebAssembly only (Emscripten)
+docker build --target wasm-builder -t wasm-engine:wasm .
+
+# Linux binary only (SDL3 + OpenGL)
+docker build --target linux-builder -t wasm-engine:linux .
+
+# Android library (ARM64-v8a)
+docker build --target android-builder -t wasm-engine:android .
+
+# Windows cross-compile (MinGW)
+docker build --target windows-builder -t wasm-engine:windows .
+```
+
+### Build Artifacts
+
+Each platform produces specific outputs:
+
+| Platform | Artifacts | Location |
+|----------|-----------|----------|
+| **WebAssembly** | `index.html`, `index.js`, `index.wasm` | `/artifacts/wasm/` |
+| **Linux** | `testProject` (ELF binary) | `/artifacts/linux/` |
+| **Android** | `libtestProject.so` (ARM64) | `/artifacts/android/` |
+| **Windows** | `testProject.exe` (PE32+) | `/artifacts/windows/` |
+
+### Docker Compose Setup
+
+For easier development workflow:
+
+**Create `docker-compose.yml`:**
+```yaml
+version: '3.8'
+
+services:
+  # Production WASM server
+  wasm-server:
+    build:
+      context: .
+      target: wasm-server
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Native Linux build
+  linux-app:
+    build:
+      context: .
+      target: linux-runtime
+    environment:
+      - DISPLAY=${DISPLAY}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+    network_mode: host
+    stdin_open: true
+    tty: true
+
+  # Artifact builder
+  artifacts:
+    build:
+      context: .
+      target: artifacts-collector
+    volumes:
+      - ./build-artifacts:/output:rw
+    command: ["sh", "-c", "cp -r /artifacts/* /output/ && cat /artifacts/manifest.txt"]
+```
+
+**Usage:**
+```bash
+# Start WASM server in background
+docker-compose up -d wasm-server
+
+# Build and extract artifacts
+docker-compose run --rm artifacts
+
+# Run Linux application interactively
+xhost +local:docker  # Allow X11 access
+docker-compose run --rm linux-app
+
+# View logs
+docker-compose logs -f wasm-server
+
+# Stop all services
+docker-compose down
+```
+
+### Advanced Build Options
+
+**Custom Build Arguments:**
+```bash
+# Specify Emscripten version
+docker build --target wasm-builder \
+    --build-arg EMSDK_VERSION=3.1.50 \
+    -t wasm-engine:custom .
+
+# Debug build with symbols
+docker build \
+    --build-arg CMAKE_BUILD_TYPE=Debug \
+    --build-arg CMAKE_CXX_FLAGS="-g -O0" \
+    -t wasm-engine:debug .
+
+# Limit parallel jobs (for limited memory)
+docker build \
+    --build-arg CMAKE_PARALLEL_JOBS=2 \
+    -t wasm-engine:lowmem .
+```
+
+**BuildKit for Better Performance:**
+```bash
+# Enable BuildKit for improved caching
+export DOCKER_BUILDKIT=1
+docker build -t wasm-engine .
+
+# Use buildx with cache
+docker buildx build \
+    --cache-from type=local,src=/tmp/docker-cache \
+    --cache-to type=local,dest=/tmp/docker-cache \
+    -t wasm-engine .
+```
+
+### Production Deployment
+
+**Standalone Production Server:**
+```bash
+# Build optimized production image
+docker build \
+    --target wasm-server \
+    --build-arg CMAKE_BUILD_TYPE=Release \
+    -t wasm-engine:production .
+
+# Run with resource limits
+docker run -d \
+    --name wasm-engine-prod \
+    --restart unless-stopped \
+    -p 80:80 \
+    --memory="512m" \
+    --cpus="1.0" \
+    wasm-engine:production
+
+# Enable TLS (with Let's Encrypt volumes)
+docker run -d \
+    --name wasm-engine-https \
+    -p 443:443 \
+    -v /etc/letsencrypt:/etc/letsencrypt:ro \
+    -v ./nginx-ssl.conf:/etc/nginx/conf.d/default.conf:ro \
+    wasm-engine:production
+```
+
+**Kubernetes Deployment:**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wasm-engine
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: wasm-engine
+  template:
+    metadata:
+      labels:
+        app: wasm-engine
+    spec:
+      containers:
+      - name: wasm-engine
+        image: wasm-engine:production
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wasm-engine-service
+spec:
+  selector:
+    app: wasm-engine
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+  type: LoadBalancer
+```
+
+### Troubleshooting
+
+**Build Issues:**
+
+```bash
+# Problem: Out of memory during build
+# Solution: Reduce parallel jobs
+docker build --build-arg CMAKE_PARALLEL_JOBS=1 -t wasm-engine .
+
+# Problem: Build cache issues
+# Solution: Clean build with no cache
+docker build --no-cache -t wasm-engine .
+
+# Problem: Permission errors
+# Solution: Build with user context
+docker build --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) .
+```
+
+**Runtime Issues:**
+
+```bash
+# Problem: X11 connection refused (Linux GUI)
+# Solution: Allow docker X11 access
+xhost +local:docker
+docker run -e DISPLAY=$DISPLAY \
+    -v /tmp/.X11-unix:/tmp/.X11-unix \
+    --user $(id -u):$(id -g) \
+    wasm-engine-linux
+
+# Problem: WASM not loading in browser
+# Solution: Check MIME types and CORS
+docker exec wasm-engine-prod cat /etc/nginx/conf.d/default.conf
+docker logs wasm-engine-prod
+
+# Problem: Performance issues
+# Solution: Check resource limits
+docker stats wasm-engine-prod
+docker update --memory="1g" --cpus="2.0" wasm-engine-prod
+```
+
+**Debugging Inside Containers:**
+
+```bash
+# Interactive shell in WASM builder
+docker run --rm -it --entrypoint /bin/bash \
+    $(docker build -q --target wasm-builder .)
+
+# Check build logs
+docker build --progress=plain --no-cache -t wasm-engine . 2>&1 | tee build.log
+
+# Inspect specific stage
+docker build --target linux-builder -t debug-stage .
+docker run --rm -it debug-stage /bin/bash
+```
+
+### Image Size Optimization
+
+Current approximate sizes:
+- `wasm-server`: ~25 MB (nginx:alpine base)
+- `linux-runtime`: ~200 MB (includes SDL3 + deps)
+- `artifacts-collector`: ~50 MB (alpine + all builds)
+
+**Optimization tips:**
+```dockerfile
+# Multi-stage build already minimizes final image
+# Additional optimizations:
+# 1. Use alpine base images
+# 2. Clean up build artifacts
+# 3. Combine RUN commands
+# 4. Use .dockerignore
+```
+
+**.dockerignore example:**
+```
+build-*/
+.git/
+.github/
+*.md
+.vscode/
+.idea/
+*.log
+CMakeCache.txt
 ```
 
 ---
@@ -688,22 +1281,22 @@ cmake --preset wasm-debug -DSERVE_PORT=5173 -DSERVE_HOST=127.0.0.1
 |----------|---------|---------|
 | **build-wasm.yml** | Push/PR to `main` | Build validation, artifact upload |
 | **pages.yml** | Push to `main` | Deploy live demo to GitHub Pages |
-| **release.yml** | Tag `v*.*.*` | Create GitHub Release with `pong-wasm.zip` |
+| **release.yml** | Tag `v*.*.*` | Create GitHub Release with assets |
 | **codeql.yml** | Push/PR/Weekly | Security analysis via CodeQL |
 | **dependency-review.yml** | PR opened/updated | Scan for vulnerable dependencies |
 
 ### GitHub Pages Deployment
 
-**Automatic deployment on every push to `main`:**
+Automatic deployment on every push to `main`:
 
 1. Build with Emscripten
 2. Copy `index.html`, `index.js`, `index.wasm` to `site/`
 3. Deploy via `actions/deploy-pages`
-4. Live at `https://<username>.github.io/<repo>/`
+4. Live at `https://notoriousjayy.github.io/WASM/`
 
 ### Release Process
 
-**Creating a release:**
+Creating a release:
 
 ```bash
 git tag v1.0.0
@@ -711,10 +1304,10 @@ git push origin v1.0.0
 ```
 
 This triggers:
-1. Full WASM build
-2. Package as `pong-wasm.zip` with all assets
+1. Full WASM and native builds
+2. Package as release assets
 3. Create GitHub Release with zip attachment
-4. Release notes auto-generated
+4. Auto-generated release notes
 
 ### Caching Strategy
 
@@ -735,88 +1328,61 @@ Emscripten's build cache is preserved across runs for faster CI:
 
 ### Project Setup
 
-1. **Fork and clone**
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/WASM.git
-   cd WASM
-   ```
+**1. Fork and clone**
+```bash
+git clone https://github.com/YOUR_USERNAME/WASM.git
+cd WASM
+```
 
-2. **Install dependencies**
-   - Install Emscripten SDK (see Quick Start)
-   - Install CMake ≥3.20
-   - Install Ninja: `sudo apt install ninja-build` (Linux) or `brew install ninja` (macOS)
+**2. Install dependencies**
+- Install Emscripten SDK (for WASM builds)
+- Install CMake ≥3.20
+- Install Ninja: `sudo apt install ninja-build` (Linux) or `brew install ninja` (macOS)
+- SDL3 will be auto-downloaded for native builds
 
-3. **Configure for development**
-   ```bash
-   source /path/to/emsdk/emsdk_env.sh
-   emcmake cmake --preset wasm-debug
-   ```
+**3. Configure for development**
 
-4. **Iterative development**
-   ```bash
-   # Make changes to C source
-   vim src/render.c
-   
-   # Rebuild (incremental)
-   cmake --build --preset wasm-debug
-   
-   # Serve and test
-   cmake --build --preset wasm-debug --target serve
-   # Open http://localhost:8000 in browser
-   ```
+For WASM:
+```bash
+source /path/to/emsdk/emsdk_env.sh
+emcmake cmake --preset wasm-debug
+```
+
+For Native:
+```bash
+cmake --preset native-debug
+```
+
+**4. Iterative development**
+```bash
+# Make changes to C source
+vim src/render.c
+
+# Rebuild (incremental)
+cmake --build --preset wasm-debug
+
+# Serve and test
+cmake --build --preset wasm-debug --target serve
+# Open http://localhost:8000 in browser
+```
 
 ### Code Organization Best Practices
 
 **Adding New Geometry Primitives:**
 
-1. **Define interface** in `include/testProject/your_shape.h`:
-   ```c
-   typedef struct YourShape {
-       Point2D *vertices;
-       size_t count;
-       // ... additional fields
-   } YourShape;
-   
-   void your_shape_init(YourShape *shape);
-   bool your_shape_generate(YourShape *shape, /* params */);
-   void your_shape_clear(YourShape *shape);
-   ```
-
-2. **Implement** in `src/your_shape.c`:
-   ```c
-   #include "your_shape.h"
-   #include <stdlib.h>
-   
-   void your_shape_init(YourShape *shape) {
-       shape->vertices = NULL;
-       shape->count = 0;
-   }
-   // ... implement remaining functions
-   ```
-
-3. **Update CMakeLists.txt** if needed (usually automatic with `GLOB`)
-
-4. **Use in render.c**:
-   ```c
-   #include "your_shape.h"
-   
-   static YourShape g_shape;
-   
-   // In initWebGL():
-   your_shape_generate(&g_shape, /* params */);
-   
-   // In tick():
-   // Update and render your shape
-   ```
+1. **Define interface** in `include/testProject/your_shape.h`
+2. **Implement** in `src/your_shape.c`
+3. **Update CMakeLists.txt** if needed (usually automatic)
+4. **Use in render.c** or `render_native.c`
 
 **Adding Math Library Modules:**
 
 1. **Create header** in `include/mathlib/newmodule/newmodule.h`
 2. **Implement** in `src/mathlib/newmodule/newmodule.c`
-3. **Follow module pattern**: clear function naming, error handling, documentation
-4. **Link selectively**: Only include modules you need in builds
+3. **Follow module pattern**: clear naming, error handling, documentation
+4. **Link selectively**: Only include modules you need
 
-**WebGL Integration Pattern:**
+**WebGL/Native Integration Pattern:**
 
 ```c
 // 1. Define global state
@@ -826,31 +1392,13 @@ static GLuint g_vbo;
 static float *g_vertex_data;
 static size_t g_vertex_count;
 
-// 2. Initialize once in initWebGL()
-void setup_geometry(void) {
-    // Generate data
-    // Create VAO/VBO
-    // Upload initial data
-}
+// 2. Initialize once in init function
+void setup_geometry(void);
+void compile_shaders(void);
 
-void compile_shaders(void) {
-    // Create program
-    // Compile vertex/fragment shaders
-    // Link program
-}
-
-// 3. Update per-frame in tick()
-void update_geometry(void) {
-    // Modify g_vertex_data
-    // Upload with glBufferSubData()
-}
-
-void render(void) {
-    glClear(GL_COLOR_BUFFER_BIT);
-    glUseProgram(g_program);
-    glBindVertexArray(g_vao);
-    glDrawArrays(GL_TRIANGLES, 0, g_vertex_count);
-}
+// 3. Update per-frame in tick/loop
+void update_geometry(void);
+void render(void);
 ```
 
 ### Debugging Tips
@@ -871,12 +1419,11 @@ console.log(gl.getError());
 
 **Emscripten Debug Flags:**
 ```cmake
-# Add to CMakeLists.txt for debugging:
 target_link_options(testProject PRIVATE
     "SHELL:-sASSERTIONS=1"              # Runtime checks
-    "SHELL:-sSAFE_HEAP=1"               # Memory access validation
+    "SHELL:-sSAFE_HEAP=1"               # Memory validation
     "SHELL:-sSTACK_OVERFLOW_CHECK=2"    # Stack monitoring
-    "-gsource-map"                       # Source map generation
+    "-gsource-map"                       # Source maps
 )
 ```
 
@@ -887,12 +1434,6 @@ target_link_options(testProject PRIVATE
 // These appear in browser console
 printf("Debug: value = %f\n", value);
 fprintf(stderr, "Error: failed at line %d\n", __LINE__);
-
-// Use EM_ASM for JavaScript interop
-#include <emscripten.h>
-EM_ASM({
-    console.log('From C:', $0);
-}, value);
 ```
 
 **Common Issues:**
@@ -900,9 +1441,9 @@ EM_ASM({
 | Problem | Solution |
 |---------|----------|
 | Black canvas | Check `glGetError()`, verify shader compilation |
-| Artifacts missing | Ensure `emcmake` is used for configure step |
+| Artifacts missing | Ensure `emcmake` is used for configure |
 | Crash on load | Check exported functions list, verify WASM loads |
-| Performance issues | Profile with browser DevTools, reduce draw calls |
+| Performance issues | Profile with DevTools, reduce draw calls |
 | Memory errors | Enable `SAFE_HEAP`, check buffer bounds |
 
 ### Testing Strategy
@@ -923,36 +1464,23 @@ void test_vec3_magnitude(void) {
 
 int main(void) {
     test_vec3_magnitude();
-    // ... more tests
     printf("All tests passed!\n");
     return 0;
 }
-```
-
-Compile natively:
-```bash
-cmake --preset native-debug
-cmake --build --preset native-debug
-./build-native/test_vectors
 ```
 
 **Integration Testing (WASM):**
 
 Use browser automation (Playwright/Puppeteer):
 ```javascript
-// test.js
 const { chromium } = require('playwright');
 
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage();
-  
   await page.goto('http://localhost:8000');
-  
-  // Wait for WASM to load
   await page.waitForFunction(() => typeof Module !== 'undefined');
   
-  // Call exported function
   const result = await page.evaluate(() => {
     return Module.ccall('myFunction', 'number', [], []);
   });
@@ -980,7 +1508,7 @@ typedef struct Particle {
 } Particle;
 
 void particle_integrate(Particle *p, real duration) {
-    if (p->inverse_mass <= 0.0) return;  // Infinite mass
+    if (p->inverse_mass <= 0.0) return;
     
     // Update position
     cyclone_vector3_add_scaled(&p->position, &p->velocity, duration);
@@ -991,25 +1519,6 @@ void particle_integrate(Particle *p, real duration) {
     
     // Apply damping
     cyclone_vector3_scale_inplace(&p->velocity, real_pow(0.99, duration));
-}
-```
-
-**Integration with Rendering:**
-
-```c
-// In render.c tick():
-static Particle g_particle;
-
-void tick(void) {
-    // Physics update
-    particle_integrate(&g_particle, delta_time);
-    
-    // Sync to polygon position
-    g_polygon.vertices[0].x = (float)g_particle.position.x;
-    g_polygon.vertices[0].y = (float)g_particle.position.y;
-    
-    // Render
-    // ...
 }
 ```
 
@@ -1031,25 +1540,8 @@ static const char *VERT_SRC =
 GLint mvp_loc = glGetUniformLocation(program, "uMVP");
 
 // In tick():
-mat4 mvp = mat4_identity();  // Compute your transform
+mat4 mvp = mat4_identity();
 glUniformMatrix4fv(mvp_loc, 1, GL_FALSE, mvp.asArray);
-```
-
-**Fragment Shader Effects:**
-
-```c
-// Gradient effect
-static const char *FRAG_SRC =
-    "#version 300 es\n"
-    "precision mediump float;\n"
-    "in vec2 vTexCoord;\n"
-    "out vec4 outColor;\n"
-    "uniform float uTime;\n"
-    "void main() {\n"
-    "  float r = 0.5 + 0.5 * sin(uTime + vTexCoord.x * 3.14);\n"
-    "  float g = 0.5 + 0.5 * cos(uTime + vTexCoord.y * 3.14);\n"
-    "  outColor = vec4(r, g, 0.5, 1.0);\n"
-    "}\n";
 ```
 
 ### Numerical Computing Examples
@@ -1066,10 +1558,8 @@ void decay_function(double t, const double *y, double *dydt, void *params) {
 }
 
 void simulate_decay(void) {
-    double y[1] = { 1.0 };  // Initial condition
-    double t = 0.0;
-    double dt = 0.1;
-    double k = 0.5;
+    double y[1] = { 1.0 };
+    double t = 0.0, dt = 0.1, k = 0.5;
     
     for (int i = 0; i < 100; i++) {
         rk4_step(decay_function, t, y, 1, dt, &k);
@@ -1085,12 +1575,11 @@ void simulate_decay(void) {
 #include "mathlib/spectral/fft.h"
 
 void lowpass_filter(double *signal, size_t n, double cutoff) {
-    // Forward FFT
     double *real = malloc(n * sizeof(double));
     double *imag = malloc(n * sizeof(double));
+    
     fft(signal, real, imag, n);
     
-    // Zero out high frequencies
     for (size_t i = 0; i < n; i++) {
         double freq = (double)i / n;
         if (freq > cutoff) {
@@ -1099,9 +1588,7 @@ void lowpass_filter(double *signal, size_t n, double cutoff) {
         }
     }
     
-    // Inverse FFT
     ifft(real, imag, signal, n);
-    
     free(real);
     free(imag);
 }
@@ -1127,15 +1614,11 @@ typedef struct Scene {
 void scene_render(Scene *scene, mat4 view_proj) {
     for (size_t i = 0; i < scene->count; i++) {
         RenderObject *obj = &scene->objects[i];
-        
-        // Compute MVP
         mat4 mvp = mat4_mul(obj->transform, view_proj);
         
-        // Upload uniform
         glUniformMatrix4fv(mvp_loc, 1, GL_FALSE, mvp.asArray);
         glUniform3fv(color_loc, 1, obj->color.asArray);
         
-        // Upload geometry and draw
         upload_polygon(&obj->geometry);
         glDrawArrays(GL_TRIANGLE_FAN, 0, obj->geometry.count);
     }
@@ -1163,7 +1646,6 @@ Polygon *polygons = malloc(1000 * sizeof(Polygon));
 
 **Memory Pools:**
 ```c
-// For frequent allocations/deallocations
 typedef struct ParticlePool {
     Particle *particles;
     bool *active;
@@ -1200,10 +1682,10 @@ glDrawArrays(GL_TRIANGLES, 0, 6000);
 **Buffer Updates:**
 ```c
 // ✅ Good: Orphaning for streaming data
-glBufferData(GL_ARRAY_BUFFER, size, NULL, GL_STREAM_DRAW);  // Orphan
-glBufferSubData(GL_ARRAY_BUFFER, 0, size, new_data);        // Upload
+glBufferData(GL_ARRAY_BUFFER, size, NULL, GL_STREAM_DRAW);
+glBufferSubData(GL_ARRAY_BUFFER, 0, size, new_data);
 
-// ✅ Good: Mapped buffers for frequent updates
+// ✅ Good: Mapped buffers
 float *ptr = glMapBufferRange(GL_ARRAY_BUFFER, 0, size, 
                                GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
 memcpy(ptr, new_data, size);
@@ -1231,31 +1713,15 @@ typedef struct {
 
 **Cache-Friendly Access:**
 ```c
-// ✅ Good: Sequential access pattern
+// ✅ Good: Sequential access
 for (size_t i = 0; i < n; i++) {
-    result[i] = a[i] + b[i];  // Sequential reads/writes
+    result[i] = a[i] + b[i];
 }
 
-// ❌ Avoid: Random access pattern
+// ❌ Avoid: Random access
 for (size_t i = 0; i < n; i++) {
-    result[indices[i]] = a[i] + b[i];  // Random writes
+    result[indices[i]] = a[i] + b[i];
 }
-```
-
-### Profiling
-
-**Browser DevTools:**
-- Performance tab → Record → Analyze frame times
-- Memory tab → Heap snapshots to detect leaks
-- Console → `performance.now()` for timing
-
-**Emscripten Profiling:**
-```bash
-# Build with profiling
-emcmake cmake --preset wasm-debug -DCMAKE_CXX_FLAGS="-profiling"
-cmake --build --preset wasm-debug
-
-# Profile in browser (opens detailed report)
 ```
 
 ---
@@ -1265,40 +1731,49 @@ cmake --build --preset wasm-debug
 ### Short-Term (v1.x)
 
 - [x] Core WebGL2 rendering pipeline
+- [x] Native SDL3 renderer
 - [x] Polygon geometry system
 - [x] Cyclone physics foundations
 - [x] Matrix/vector math library
+- [x] Comprehensive numerical computing library
 - [x] CI/CD with GitHub Actions
-- [ ] **Native renderer** using SDL2 + OpenGL
-- [ ] **2D collision detection** (AABB, SAT)
+- [x] Multi-stage Docker deployment (WebAssembly, Linux, Android, Windows)
+- [x] Production-ready Docker Compose configuration
+- [ ] **2D collision detection** (AABB, SAT, GJK)
 - [ ] **Texture loading** and rendering
-- [ ] **Audio playback** via Web Audio API
+- [ ] **Audio playback** via Web Audio API / SDL_mixer
 - [ ] **Input handling** (keyboard, mouse, touch)
+- [ ] **Documentation** (API reference, tutorials)
 
 ### Mid-Term (v2.x)
 
 - [ ] **Complete physics engine**
   - Rigid body dynamics
-  - Contact resolution
+  - Contact resolution and impulse-based collision
   - Springs and constraints
+  - Continuous collision detection
 - [ ] **3D rendering**
   - Z-buffer and depth testing
   - Perspective-correct texturing
   - Basic lighting (Phong/Blinn-Phong)
+  - Normal mapping
 - [ ] **Scene graph** with hierarchical transforms
 - [ ] **Asset pipeline** (model loading, shader management)
 - [ ] **Particle systems** with GPU instancing
+- [ ] **Spatial data structures** (octree, BVH)
 
 ### Long-Term (v3.x)
 
 - [ ] **Advanced rendering**
-  - Shadow mapping
+  - Shadow mapping (CSM)
   - Deferred shading
-  - Post-processing effects (bloom, SSAO)
+  - Post-processing effects (bloom, SSAO, DOF)
+  - PBR materials
 - [ ] **Animation system**
   - Skeletal animation
   - Blend trees
   - Inverse kinematics
+  - Animation compression
 - [ ] **Networking** via WebSockets
 - [ ] **Scripting layer** (Lua/WASM-embedded)
 - [ ] **Tooling**
@@ -1308,10 +1783,11 @@ cmake --build --preset wasm-debug
 
 ### Research Directions
 
-- **PDE-Based Simulations**: Fluid dynamics, heat transfer
-- **Machine Learning Integration**: Neural networks compiled to WASM
-- **WebGPU Port**: Migrate from WebGL2 to WebGPU for compute shaders
-- **Multi-threading**: Leverage Web Workers and SharedArrayBuffer
+- **PDE-Based Simulations**: Fluid dynamics (Navier-Stokes), heat transfer, wave propagation
+- **Machine Learning Integration**: Neural networks compiled to WASM for AI opponents
+- **WebGPU Port**: Migrate from WebGL2 to WebGPU for compute shaders and better performance
+- **Multi-threading**: Leverage Web Workers and SharedArrayBuffer for parallel computation
+- **Procedural Generation**: Noise functions, L-systems, cellular automata
 
 ---
 
@@ -1322,14 +1798,18 @@ cmake --build --preset wasm-debug
 - **Emscripten**: https://emscripten.org/docs/
 - **WebGL2 Fundamentals**: https://webgl2fundamentals.org/
 - **CMake**: https://cmake.org/documentation/
+- **SDL3**: https://wiki.libsdl.org/SDL3/FrontPage
+- **Docker**: https://docs.docker.com/
+- **Docker Compose**: https://docs.docker.com/compose/
 - **Cyclone Physics Engine**: *Game Physics Engine Development* by Ian Millington
 
 ### Learning Materials
 
-- **Linear Algebra**: *3D Math Primer for Graphics and Game Development*
-- **Numerical Methods**: *Numerical Recipes in C*
+- **Linear Algebra**: *3D Math Primer for Graphics and Game Development* by Fletcher Dunn
+- **Numerical Methods**: *Numerical Recipes in C* by Press et al.
 - **WebAssembly**: https://webassembly.org/getting-started/developers-guide/
-- **Game Physics**: *Game Physics Engine Development* (Millington)
+- **Game Physics**: *Game Physics Engine Development* by Ian Millington
+- **TAOCP**: *The Art of Computer Programming* Vol. 2 by Donald Knuth
 
 ### Related Projects
 
@@ -1344,13 +1824,13 @@ cmake --build --preset wasm-debug
 
 Contributions are welcome! Areas of particular interest:
 
-- **Native rendering backend** (SDL2, GLFW)
 - **Physics examples** (rigid bodies, soft bodies, fluids)
-- **Additional geometry primitives** (Bezier curves, splines)
+- **Additional geometry primitives** (Bezier curves, splines, meshes)
 - **Numerical methods** (add new mathlib modules)
 - **Documentation improvements** (tutorials, API docs)
 - **Test coverage** (unit tests, integration tests)
-- **Performance optimizations**
+- **Performance optimizations** (SIMD, multithreading)
+- **Example applications** (games, simulations, visualizations)
 
 **Contribution Guidelines:**
 
@@ -1372,6 +1852,7 @@ This project is distributed under the **MIT License**. See `LICENSE` file for de
 ### Third-Party Acknowledgments
 
 - **Emscripten**: University of Illinois/NCSA Open Source License
+- **SDL3**: zlib License
 - **Cyclone Physics Engine**: Concepts from Ian Millington's work
 - **Numerical Algorithms**: Inspired by TAOCP and Numerical Recipes
 
@@ -1390,7 +1871,9 @@ This project is distributed under the **MIT License**. See `LICENSE` file for de
 Special thanks to:
 - The **Emscripten team** for enabling C/C++ in the browser
 - **Khronos Group** for WebGL specifications
+- **SDL team** for the excellent cross-platform library
 - **Ian Millington** for Cyclone physics concepts
+- **Donald Knuth** for TAOCP and numerical computing foundations
 - The **open-source community** for tools and inspiration
 
 ---
@@ -1399,27 +1882,38 @@ Special thanks to:
 
 - **Issues**: [GitHub Issues](https://github.com/notoriousjayy/WASM/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/notoriousjayy/WASM/discussions)
-- **Documentation**: See project wiki (coming soon)
+- **Documentation**: See BUILD.md for detailed build instructions
 
 ---
 
 ## 🔖 Version History
 
-### v0.1.0 (Current)
+### v0.2.0 (Current)
+- Added native SDL3 renderer for desktop platforms
+- Expanded numerical computing library with 13+ specialized modules
+- Enhanced physics engine with quaternions and transforms
+- Multi-stage Docker build supporting 4 platforms (WebAssembly, Linux, Android, Windows)
+- Production-ready Docker deployment with nginx
+- Docker Compose configuration for development workflow
+- Kubernetes deployment manifests
+- Improved documentation and comprehensive examples
+- Enhanced CI/CD pipeline with multi-platform builds
+
+### v0.1.0
 - Initial release
 - WebGL2 rendering with animated hexagon demo
 - Complete vector/matrix math library
 - Polygon geometry system
 - Cyclone physics core foundations
-- Numerical computing library structure
-- CI/CD pipeline with GitHub Actions
-- Docker support
+- Basic numerical computing library structure
+- Single-stage Docker support
 
-### Planned: v0.2.0
-- Native renderer (SDL2)
-- Input handling
-- 2D collision detection
-- Texture support
+### Planned: v0.3.0
+- 2D collision detection (AABB, SAT, GJK)
+- Input handling system (keyboard, mouse, touch, gamepad)
+- Texture loading and rendering
+- Audio integration (Web Audio API / SDL_mixer)
+- Mobile touch controls optimization
 
 ---
 
