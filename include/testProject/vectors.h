@@ -149,4 +149,11 @@ vec3 vec3_perpendicular(vec3 length, vec3 direction);
 vec2 vec2_reflect(vec2 sourceVector, vec2 normal);
 vec3 vec3_reflect(vec3 sourceVector, vec3 normal);
 
+/* Compatibility wrappers for matrices.c */
+float Dot(vec3 a, vec3 b);
+vec3  Cross(vec3 a, vec3 b);
+float Magnitude(vec3 v);
+float MagnitudeSq(vec3 v);
+vec3  Normalized(vec3 v);
+
 #endif /* MATH_VECTORS_H_ */

@@ -3,18 +3,44 @@
 #include "render.h"
 #include "polygon.h"
 
-#include <GLES3/gl3.h>
-#include <emscripten.h>
-#include <emscripten/html5.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
 
+#ifdef __EMSCRIPTEN__
+#include <GLES3/gl3.h>
+#include <emscripten.h>
+#include <emscripten/html5.h>
+#else
+// For native builds, define OpenGL types as stubs
+typedef unsigned int GLuint;
+typedef int GLsizei;
+typedef unsigned int GLenum;
+typedef int GLint;
+typedef float GLfloat;
+typedef unsigned char GLboolean;
+typedef int GLsizeiptr;
+
+#define GL_VERTEX_SHADER 0x8B31
+#define GL_FRAGMENT_SHADER 0x8B30
+#define GL_COMPILE_STATUS 0x8B81
+#define GL_INFO_LOG_LENGTH 0x8B84
+#define GL_ARRAY_BUFFER 0x8892
+#define GL_DYNAMIC_DRAW 0x88E8
+#define GL_FLOAT 0x1406
+#define GL_FALSE 0
+#define GL_COLOR_BUFFER_BIT 0x00004000
+#define GL_LINE_LOOP 0x0002
+
+#warning "render.c is designed for WebGL2/Emscripten - native OpenGL not implemented"
+#endif
+
 /* ------------------------------------------------------------------------- */
 /* Global WebGL / render state                                               */
 /* ------------------------------------------------------------------------- */
 
+#ifdef __EMSCRIPTEN__
 static EMSCRIPTEN_WEBGL_CONTEXT_HANDLE g_ctx = 0;
 
 static GLuint   program     = 0;
@@ -22,18 +48,20 @@ static GLuint   vao         = 0;
 static GLuint   vbo         = 0;
 static GLsizei  vertexCount = 0;
 
-static Polygon  g_polygon;             /* animated polygon */
-static Point2D *g_baseVerts = NULL;    /* original (untransformed) vertices */
-static bool     g_main_loop_started = false;
-
 /* CPU-side mirror of vertex data (x0,y0,x1,y1,...) for VBO updates */
 static float   *g_vertexData       = NULL;
 static size_t   g_vertexFloatCount = 0;
+#endif
+
+static Polygon  g_polygon;             /* animated polygon */
+static Point2D *g_baseVerts = NULL;    /* original (untransformed) vertices */
+static bool     g_main_loop_started = false;
 
 /* ------------------------------------------------------------------------- */
 /* Shaders                                                                   */
 /* ------------------------------------------------------------------------- */
 
+#ifdef __EMSCRIPTEN__
 static const char *VERT_SRC =
     "#version 300 es\n"
     "layout(location = 0) in vec2 aPos;\n"
@@ -100,6 +128,7 @@ resize_callback(int eventType, const EmscriptenUiEvent *e, void *userData)
 
     return EM_TRUE;
 }
+#endif /* __EMSCRIPTEN__ */
 
 /* ------------------------------------------------------------------------- */
 /* initWebGL                                                                 */
@@ -108,6 +137,7 @@ resize_callback(int eventType, const EmscriptenUiEvent *e, void *userData)
 EMSCRIPTEN_KEEPALIVE
 int initWebGL(void)
 {
+#ifdef __EMSCRIPTEN__
     printf("[initWebGL] starting\n");
 
     /* 0) Create and activate a WebGL2 context on <canvas id="canvas"> */
@@ -241,12 +271,17 @@ int initWebGL(void)
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     printf("[initWebGL] done\n");
     return 1; /* success */
+#else
+    printf("[initWebGL] Native build - WebGL not available\n");
+    return 0;
+#endif
 }
 
 /* ------------------------------------------------------------------------- */
 /* Per-frame draw function                                                   */
 /* ------------------------------------------------------------------------- */
 
+#ifdef __EMSCRIPTEN__
 static void tick(void)
 {
     static int frameCount = 0;
@@ -322,6 +357,7 @@ static void tick(void)
         glDrawArrays(GL_LINE_LOOP, 0, vertexCount);
     }
 }
+#endif /* __EMSCRIPTEN__ */
 
 /* ------------------------------------------------------------------------- */
 /* startMainLoop                                                             */
@@ -330,6 +366,7 @@ static void tick(void)
 EMSCRIPTEN_KEEPALIVE
 void startMainLoop(void)
 {
+#ifdef __EMSCRIPTEN__
     printf("[startMainLoop] called\n");
 
     if (g_main_loop_started) {
@@ -342,4 +379,7 @@ void startMainLoop(void)
 
     /* 0 = browser-driven fps, 1 = simulate infinite loop */
     emscripten_set_main_loop(tick, 0, 1);
+#else
+    printf("[startMainLoop] Native build - main loop not available\n");
+#endif
 }

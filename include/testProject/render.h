@@ -1,7 +1,12 @@
 #ifndef RENDER_H
 #define RENDER_H
 
+#ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
+#else
+// Define EMSCRIPTEN_KEEPALIVE as empty for native builds
+#define EMSCRIPTEN_KEEPALIVE
+#endif
 
 #ifdef __cplusplus
 extern "C" {

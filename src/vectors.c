@@ -514,3 +514,27 @@ vec3 vec3_reflect(vec3 sourceVector, vec3 normal) {
     float factor = vec3_dot(sourceVector, normal) * 2.0f;
     return vec3_sub(sourceVector, vec3_mul_scalar(normal, factor));
 }
+
+/* ------------------------------------------------------------------------- */
+/* Compatibility wrappers for matrices.c                                    */
+/* ------------------------------------------------------------------------- */
+
+float Dot(vec3 a, vec3 b) {
+    return vec3_dot(a, b);
+}
+
+vec3 Cross(vec3 a, vec3 b) {
+    return vec3_cross(a, b);
+}
+
+float Magnitude(vec3 v) {
+    return vec3_magnitude(v);
+}
+
+float MagnitudeSq(vec3 v) {
+    return vec3_magnitude_sq(v);
+}
+
+vec3 Normalized(vec3 v) {
+    return vec3_normalized(v);
+}
