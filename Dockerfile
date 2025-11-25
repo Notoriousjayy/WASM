@@ -330,6 +330,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install only runtime dependencies (much smaller than build deps)
 RUN apt-get update && apt-get install -y \
     libgl1 \
+    libopengl0 \
     libgles2 \
     libx11-6 \
     libxext6 \
@@ -340,8 +341,16 @@ RUN apt-get update && apt-get install -y \
     libxss1 \
     libxxf86vm1 \
     libxtst6 \
+    libxkbcommon0 \
+    libwayland-client0 \
+    libwayland-egl1 \
+    libdbus-1-3 \
+    libudev1 \
     libasound2 \
     libpulse0 \
+    libpipewire-0.3-0 \
+    libjack0 \
+    libsndio7.0 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
