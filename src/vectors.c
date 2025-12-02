@@ -253,8 +253,6 @@ void vec2_sub_inplace(vec2 *l, vec2 r) {
     if (l == NULL) {
         return;
     }
-    /* NOTE: fixed a likely typo from the original C++:
-       original had l.x -= r.y, which is almost certainly wrong. */
     l->x -= r.x;
     l->y -= r.y;
 }
@@ -418,8 +416,6 @@ void vec2_normalize(vec2 *v) {
         return;
     }
     float mag = vec2_magnitude(*v);
-    /* Original C++ code assumed non-zero vector; we keep behavior:
-       division by zero will propagate NaNs/Infs. */
     float inv = 1.0f / mag;
     *v        = vec2_mul_scalar(*v, inv);
 }

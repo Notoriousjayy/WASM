@@ -107,7 +107,7 @@ const float *mat4_row_const(const mat4 *m, int row) {
     return &m->asArray[row * 4];
 }
 
-/* ---------- equality / printing / fast inverse (C++ operators → functions) ---------- */
+/* ---------- equality / printing / fast inverse ---------- */
 
 #ifndef NO_EXTRAS
 

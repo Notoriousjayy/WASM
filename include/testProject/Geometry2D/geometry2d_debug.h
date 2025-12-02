@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 /*******************************************************************************
- * Debug Print Functions (replaces C++ operator<<)
+ * Debug Print Functions
  ******************************************************************************/
 
 #ifndef NO_EXTRAS
