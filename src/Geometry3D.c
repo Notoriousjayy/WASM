@@ -1,10 +1,3 @@
-/**
- * geometry3d.c - 3D Geometry Primitives and Collision Detection (C23)
- * 
- * Translated from C++ to C23
- * Original: Geometry3D.cpp
- */
-
 #include "geometry3D.h"
 #include "compare.h"   /* CMP and float helpers */
 
