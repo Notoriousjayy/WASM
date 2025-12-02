@@ -1,4 +1,5 @@
 #include "matrices.h"
+#include "compare.h"   /* use global CMP / float compare utilities */
 
 #include <math.h>
 #include <float.h>
@@ -11,6 +12,9 @@ float Magnitude(vec3 v);
 float MagnitudeSq(vec3 v);
 vec3  Normalized(vec3 v);
 float DEG2RAD(float degrees);
+
+/* Remove the #ifndef CMP / #define CMP block entirely */
+
 
 #ifndef CMP
 #define CMP(x, y) \
@@ -940,4 +944,14 @@ vec3 Decompose(mat3 rot1) {
     }
 
     return (vec3){ x, y, z };
+}
+
+
+mat4 mat4_perspective(float fov, float aspect, float zNear, float zFar) {
+    return Projection(fov, aspect, zNear, zFar);
+}
+
+
+mat4 mat4_ortho(float left, float right, float bottom, float top, float zNear, float zFar) {
+    return Ortho(left, right, bottom, top, zNear, zFar);
 }

@@ -28,6 +28,7 @@ typedef struct mat2 {
                   _21, _22;
         };
         float asArray[4];
+        float m[2][2];
     };
 } mat2;
 
@@ -39,6 +40,7 @@ typedef struct mat3 {
                   _31, _32, _33;
         };
         float asArray[9];
+        float m[3][3];
     };
 } mat3;
 
@@ -51,6 +53,7 @@ typedef struct mat4 {
                   _41, _42, _43, _44;
         };
         float asArray[16];
+        float m[4][4];
     };
 } mat4;
 
@@ -268,6 +271,8 @@ mat4 TransformAxisAngle(vec3 scale, vec3 rotationAxis, float rotationAngle, vec3
 mat4 LookAt(vec3 position, vec3 target, vec3 up);
 mat4 Projection(float fov, float aspect, float zNear, float zFar);
 mat4 Ortho(float left, float right, float bottom, float top, float zNear, float zFar);
+mat4 mat4_perspective(float fov, float aspect, float zNear, float zFar);
+mat4 mat4_ortho(float left, float right, float bottom, float top, float zNear, float zFar);
 
 /* ============================================================================
  *  Decompose rotation (mat3 -> Euler or similar)

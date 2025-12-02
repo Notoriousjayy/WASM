@@ -21,6 +21,7 @@ typedef struct vec2 {
             float y;
         };
         float asArray[2];
+        float v[2];
     };
 } vec2;
 
@@ -32,6 +33,7 @@ typedef struct vec3 {
             float z;
         };
         float asArray[3];
+        float v[3];
     };
 } vec3;
 
@@ -60,6 +62,10 @@ vec3 vec3_mul(vec3 l, vec3 r);
 /* Scalar multiply */
 vec2 vec2_mul_scalar(vec2 v, float s);
 vec3 vec3_mul_scalar(vec3 v, float s);
+
+/* Convenience scaling aliases used by geometry code */
+vec2 vec2_scale(vec2 v, float scalar);
+vec3 vec3_scale(vec3 v, float scalar);
 
 #ifndef NO_EXTRAS
 /* Component-wise divide */
