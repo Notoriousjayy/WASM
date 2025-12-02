@@ -1,15 +1,12 @@
 #include "geometry2d.h"
 #include "matrices.h"
+#include "compare.h"   /* always use compare.h */
 
 #include <math.h>
 #include <float.h>
 
-#ifdef DO_SANITY_TESTS
-    #include "compare.h"
-#else
-    #define CMP(x, y) \
-        (fabsf((x) - (y)) <= FLT_EPSILON * fmaxf(1.0f, fmaxf(fabsf(x), fabsf(y))))
-#endif
+/* Remove the entire DO_SANITY_TESTS / #else / #define CMP block */
+
 
 #ifndef DEG2RAD
     #define DEG2RAD(deg) ((deg) * 0.0174532925199433f)  // deg * (PI / 180)

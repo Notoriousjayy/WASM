@@ -171,7 +171,7 @@ static inline Line3D line3d_create(Point3D start, Point3D end) {
 }
 
 static inline Line3D line3d_default(void) {
-    return (Line3D){ .start = {0, 0, 0}, .end = {0, 0, 0} };
+    return (Line3D){ .start = {{{0, 0, 0}}}, .end = {{{0, 0, 0}}} };
 }
 
 static inline Ray3D ray3d_create(Point3D origin, vec3 direction) {
@@ -179,7 +179,7 @@ static inline Ray3D ray3d_create(Point3D origin, vec3 direction) {
 }
 
 static inline Ray3D ray3d_default(void) {
-    return (Ray3D){ .origin = {0, 0, 0}, .direction = {0, 0, 1} };
+    return (Ray3D){ .origin = {{{0, 0, 0}}}, .direction = {{{0, 0, 1}}} };
 }
 
 static inline void ray3d_normalize_direction(Ray3D* self) {
@@ -191,7 +191,7 @@ static inline Sphere sphere_create(Point3D position, float radius) {
 }
 
 static inline Sphere sphere_default(void) {
-    return (Sphere){ .position = {0, 0, 0}, .radius = 1.0f };
+    return (Sphere){ .position = {{{0, 0, 0}}}, .radius = 1.0f };
 }
 
 static inline AABB aabb_create(Point3D position, vec3 size) {
@@ -199,7 +199,7 @@ static inline AABB aabb_create(Point3D position, vec3 size) {
 }
 
 static inline AABB aabb_default(void) {
-    return (AABB){ .position = {0, 0, 0}, .size = {1, 1, 1} };
+    return (AABB){ .position = {{{0, 0, 0}}}, .size = {{{1, 1, 1}}} };
 }
 
 static inline OBB obb_create(Point3D position, vec3 size, mat3 orientation) {
@@ -211,7 +211,7 @@ static inline OBB obb_create_simple(Point3D position, vec3 size) {
 }
 
 static inline OBB obb_default(void) {
-    return (OBB){ .position = {0, 0, 0}, .size = {1, 1, 1}, .orientation = mat3_identity() };
+    return (OBB){ .position = {{{0, 0, 0}}}, .size = {{{1, 1, 1}}}, .orientation = mat3_identity() };
 }
 
 static inline Plane plane_create(vec3 normal, float distance) {
@@ -219,7 +219,7 @@ static inline Plane plane_create(vec3 normal, float distance) {
 }
 
 static inline Plane plane_default(void) {
-    return (Plane){ .normal = {1, 0, 0}, .distance = 0.0f };
+    return (Plane){ .normal = {{{1, 0, 0}}}, .distance = 0.0f };
 }
 
 static inline Triangle triangle_create(Point3D a, Point3D b, Point3D c) {
@@ -261,8 +261,8 @@ static inline Model model_default(void) {
     return (Model){
         .content = NULL,
         .bounds = aabb_default(),
-        .position = {0, 0, 0},
-        .rotation = {0, 0, 0},
+        .position = {{{0, 0, 0}}},
+        .rotation = {{{0, 0, 0}}},
         .flag = false,
         .parent = NULL
     };

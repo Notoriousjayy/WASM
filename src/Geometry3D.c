@@ -6,18 +6,12 @@
  */
 
 #include "geometry3D.h"
+#include "compare.h"   /* CMP and float helpers */
 
 #include <math.h>
 #include <float.h>
 #include <stdlib.h>
 #include <string.h>
-
-/*******************************************************************************
- * Floating Point Comparison Macro
- ******************************************************************************/
-
-#define CMP(x, y) \
-    (fabsf((x) - (y)) <= FLT_EPSILON * fmaxf(1.0f, fmaxf(fabsf(x), fabsf(y))))
 
 /*******************************************************************************
  * Dynamic Array Implementations
@@ -130,15 +124,15 @@ void raycast_result_reset(RaycastResult* result) {
     if (result) {
         result->t = -1.0f;
         result->hit = false;
-        result->normal = (vec3){0, 0, 1};
-        result->point = (vec3){0, 0, 0};
+        result->normal = vec3_make(0, 0, 1);
+        result->point = vec3_make(0, 0, 0);
     }
 }
 
 void collision_manifold_init(CollisionManifold* result) {
     if (result) {
         result->colliding = false;
-        result->normal = (vec3){0, 0, 1};
+        result->normal = vec3_make(0, 0, 1);
         result->depth = FLT_MAX;
         contact_array_init(&result->contacts);
     }
@@ -153,7 +147,7 @@ void collision_manifold_free(CollisionManifold* result) {
 void collision_manifold_reset(CollisionManifold* result) {
     if (result) {
         result->colliding = false;
-        result->normal = (vec3){0, 0, 1};
+        result->normal = vec3_make(0, 0, 1);
         result->depth = FLT_MAX;
         contact_array_clear(&result->contacts);
     }
@@ -186,21 +180,21 @@ Ray3D ray3d_from_points(Point3D from, Point3D to) {
 vec3 aabb_get_min(AABB aabb) {
     vec3 p1 = vec3_add(aabb.position, aabb.size);
     vec3 p2 = vec3_sub(aabb.position, aabb.size);
-    return (vec3){
+    return vec3_make(
         fminf(p1.x, p2.x),
         fminf(p1.y, p2.y),
         fminf(p1.z, p2.z)
-    };
+    );
 }
 
 vec3 aabb_get_max(AABB aabb) {
     vec3 p1 = vec3_add(aabb.position, aabb.size);
     vec3 p2 = vec3_sub(aabb.position, aabb.size);
-    return (vec3){
+    return vec3_make(
         fmaxf(p1.x, p2.x),
         fmaxf(p1.y, p2.y),
         fmaxf(p1.z, p2.z)
-    };
+    );
 }
 
 AABB aabb_from_min_max(vec3 min, vec3 max) {
@@ -319,11 +313,11 @@ bool point_in_obb(Point3D point, OBB obb) {
     vec3 dir = vec3_sub(point, obb.position);
 
     for (int i = 0; i < 3; ++i) {
-        vec3 axis = (vec3){
+        vec3 axis = vec3_make(
             obb.orientation.m[i][0],
             obb.orientation.m[i][1],
             obb.orientation.m[i][2]
-        };
+        );
         float distance = vec3_dot(dir, axis);
         float extent = obb.size.v[i];
 
@@ -415,11 +409,11 @@ Point3D closest_point_on_obb(OBB obb, Point3D point) {
     vec3 dir = vec3_sub(point, obb.position);
 
     for (int i = 0; i < 3; ++i) {
-        vec3 axis = (vec3){
+        vec3 axis = vec3_make(
             obb.orientation.m[i][0],
             obb.orientation.m[i][1],
             obb.orientation.m[i][2]
-        };
+        );
         float distance = vec3_dot(dir, axis);
         float extent = obb.size.v[i];
 
@@ -499,12 +493,15 @@ Interval3D interval3d_from_aabb(AABB aabb, vec3 axis) {
     vec3 mn = aabb_get_min(aabb);
     vec3 mx = aabb_get_max(aabb);
 
-    vec3 vertices[8] = {
-        {mn.x, mx.y, mx.z}, {mn.x, mx.y, mn.z},
-        {mn.x, mn.y, mx.z}, {mn.x, mn.y, mn.z},
-        {mx.x, mx.y, mx.z}, {mx.x, mx.y, mn.z},
-        {mx.x, mn.y, mx.z}, {mx.x, mn.y, mn.z}
-    };
+    vec3 vertices[8];
+    vertices[0] = vec3_make(mn.x, mx.y, mx.z);
+    vertices[1] = vec3_make(mn.x, mx.y, mn.z);
+    vertices[2] = vec3_make(mn.x, mn.y, mx.z);
+    vertices[3] = vec3_make(mn.x, mn.y, mn.z);
+    vertices[4] = vec3_make(mx.x, mx.y, mx.z);
+    vertices[5] = vec3_make(mx.x, mx.y, mn.z);
+    vertices[6] = vec3_make(mx.x, mn.y, mx.z);
+    vertices[7] = vec3_make(mx.x, mn.y, mn.z);
 
     Interval3D result;
     result.min = result.max = vec3_dot(axis, vertices[0]);
@@ -520,11 +517,10 @@ Interval3D interval3d_from_aabb(AABB aabb, vec3 axis) {
 Interval3D interval3d_from_obb(OBB obb, vec3 axis) {
     vec3 C = obb.position;
     vec3 E = obb.size;
-    vec3 A[3] = {
-        {obb.orientation.m[0][0], obb.orientation.m[0][1], obb.orientation.m[0][2]},
-        {obb.orientation.m[1][0], obb.orientation.m[1][1], obb.orientation.m[1][2]},
-        {obb.orientation.m[2][0], obb.orientation.m[2][1], obb.orientation.m[2][2]}
-    };
+    vec3 A[3];
+    A[0] = vec3_make(obb.orientation.m[0][0], obb.orientation.m[0][1], obb.orientation.m[0][2]);
+    A[1] = vec3_make(obb.orientation.m[1][0], obb.orientation.m[1][1], obb.orientation.m[1][2]);
+    A[2] = vec3_make(obb.orientation.m[2][0], obb.orientation.m[2][1], obb.orientation.m[2][2]);
 
     vec3 vertices[8];
     vertices[0] = vec3_add(vec3_add(vec3_add(C, vec3_scale(A[0], E.v[0])), vec3_scale(A[1], E.v[1])), vec3_scale(A[2], E.v[2]));
@@ -619,14 +615,13 @@ bool aabb_aabb(AABB a1, AABB a2) {
 }
 
 bool aabb_obb(AABB aabb, OBB obb) {
-    vec3 test[15] = {
-        {1, 0, 0},  /* AABB axis 1 */
-        {0, 1, 0},  /* AABB axis 2 */
-        {0, 0, 1},  /* AABB axis 3 */
-        {obb.orientation.m[0][0], obb.orientation.m[0][1], obb.orientation.m[0][2]},
-        {obb.orientation.m[1][0], obb.orientation.m[1][1], obb.orientation.m[1][2]},
-        {obb.orientation.m[2][0], obb.orientation.m[2][1], obb.orientation.m[2][2]}
-    };
+    vec3 test[15];
+    test[0] = vec3_make(1, 0, 0);  /* AABB axis 1 */
+    test[1] = vec3_make(0, 1, 0);  /* AABB axis 2 */
+    test[2] = vec3_make(0, 0, 1);  /* AABB axis 3 */
+    test[3] = vec3_make(obb.orientation.m[0][0], obb.orientation.m[0][1], obb.orientation.m[0][2]);
+    test[4] = vec3_make(obb.orientation.m[1][0], obb.orientation.m[1][1], obb.orientation.m[1][2]);
+    test[5] = vec3_make(obb.orientation.m[2][0], obb.orientation.m[2][1], obb.orientation.m[2][2]);
 
     for (int i = 0; i < 3; ++i) {
         test[6 + i * 3 + 0] = vec3_cross(test[i], test[3]);
@@ -651,14 +646,13 @@ bool aabb_plane(AABB aabb, Plane plane) {
 }
 
 bool obb_obb(OBB o1, OBB o2) {
-    vec3 test[15] = {
-        {o1.orientation.m[0][0], o1.orientation.m[0][1], o1.orientation.m[0][2]},
-        {o1.orientation.m[1][0], o1.orientation.m[1][1], o1.orientation.m[1][2]},
-        {o1.orientation.m[2][0], o1.orientation.m[2][1], o1.orientation.m[2][2]},
-        {o2.orientation.m[0][0], o2.orientation.m[0][1], o2.orientation.m[0][2]},
-        {o2.orientation.m[1][0], o2.orientation.m[1][1], o2.orientation.m[1][2]},
-        {o2.orientation.m[2][0], o2.orientation.m[2][1], o2.orientation.m[2][2]}
-    };
+    vec3 test[15];
+    test[0] = vec3_make(o1.orientation.m[0][0], o1.orientation.m[0][1], o1.orientation.m[0][2]);
+    test[1] = vec3_make(o1.orientation.m[1][0], o1.orientation.m[1][1], o1.orientation.m[1][2]);
+    test[2] = vec3_make(o1.orientation.m[2][0], o1.orientation.m[2][1], o1.orientation.m[2][2]);
+    test[3] = vec3_make(o2.orientation.m[0][0], o2.orientation.m[0][1], o2.orientation.m[0][2]);
+    test[4] = vec3_make(o2.orientation.m[1][0], o2.orientation.m[1][1], o2.orientation.m[1][2]);
+    test[5] = vec3_make(o2.orientation.m[2][0], o2.orientation.m[2][1], o2.orientation.m[2][2]);
 
     for (int i = 0; i < 3; ++i) {
         test[6 + i * 3 + 0] = vec3_cross(test[i], test[3]);
@@ -675,11 +669,10 @@ bool obb_obb(OBB o1, OBB o2) {
 }
 
 bool obb_plane(OBB obb, Plane plane) {
-    vec3 rot[3] = {
-        {obb.orientation.m[0][0], obb.orientation.m[0][1], obb.orientation.m[0][2]},
-        {obb.orientation.m[1][0], obb.orientation.m[1][1], obb.orientation.m[1][2]},
-        {obb.orientation.m[2][0], obb.orientation.m[2][1], obb.orientation.m[2][2]}
-    };
+    vec3 rot[3];
+    rot[0] = vec3_make(obb.orientation.m[0][0], obb.orientation.m[0][1], obb.orientation.m[0][2]);
+    rot[1] = vec3_make(obb.orientation.m[1][0], obb.orientation.m[1][1], obb.orientation.m[1][2]);
+    rot[2] = vec3_make(obb.orientation.m[2][0], obb.orientation.m[2][1], obb.orientation.m[2][2]);
 
     float p_len = obb.size.x * fabsf(vec3_dot(plane.normal, rot[0])) +
                   obb.size.y * fabsf(vec3_dot(plane.normal, rot[1])) +
@@ -704,9 +697,9 @@ bool triangle_aabb(Triangle t, AABB a) {
     vec3 f1 = vec3_sub(t.c, t.b);
     vec3 f2 = vec3_sub(t.a, t.c);
 
-    vec3 u0 = {1.0f, 0.0f, 0.0f};
-    vec3 u1 = {0.0f, 1.0f, 0.0f};
-    vec3 u2 = {0.0f, 0.0f, 1.0f};
+    vec3 u0 = vec3_make(1.0f, 0.0f, 0.0f);
+    vec3 u1 = vec3_make(0.0f, 1.0f, 0.0f);
+    vec3 u2 = vec3_make(0.0f, 0.0f, 1.0f);
 
     vec3 test[13] = {
         u0, u1, u2,
@@ -729,9 +722,9 @@ bool triangle_obb(Triangle t, OBB o) {
     vec3 f1 = vec3_sub(t.c, t.b);
     vec3 f2 = vec3_sub(t.a, t.c);
 
-    vec3 u0 = {o.orientation.m[0][0], o.orientation.m[0][1], o.orientation.m[0][2]};
-    vec3 u1 = {o.orientation.m[1][0], o.orientation.m[1][1], o.orientation.m[1][2]};
-    vec3 u2 = {o.orientation.m[2][0], o.orientation.m[2][1], o.orientation.m[2][2]};
+    vec3 u0 = vec3_make(o.orientation.m[0][0], o.orientation.m[0][1], o.orientation.m[0][2]);
+    vec3 u1 = vec3_make(o.orientation.m[1][0], o.orientation.m[1][1], o.orientation.m[1][2]);
+    vec3 u2 = vec3_make(o.orientation.m[2][0], o.orientation.m[2][1], o.orientation.m[2][2]);
 
     vec3 test[13] = {
         u0, u1, u2,
@@ -781,7 +774,7 @@ vec3 sat_cross_edge(vec3 a, vec3 b, vec3 c, vec3 d) {
         return result;
     }
 
-    return (vec3){0, 0, 0};
+    return vec3_make(0, 0, 0);
 }
 
 bool triangle_triangle(Triangle t1, Triangle t2) {
@@ -893,7 +886,13 @@ bool raycast_aabb(AABB aabb, Ray3D ray, RaycastResult* out_result) {
         out_result->hit = true;
         out_result->point = vec3_add(ray.origin, vec3_scale(ray.direction, t_result));
 
-        vec3 normals[6] = {{-1,0,0}, {1,0,0}, {0,-1,0}, {0,1,0}, {0,0,-1}, {0,0,1}};
+        vec3 normals[6];
+        normals[0] = vec3_make(-1, 0, 0);
+        normals[1] = vec3_make(1, 0, 0);
+        normals[2] = vec3_make(0, -1, 0);
+        normals[3] = vec3_make(0, 1, 0);
+        normals[4] = vec3_make(0, 0, -1);
+        normals[5] = vec3_make(0, 0, 1);
         float t_vals[6] = {t1, t2, t3, t4, t5, t6};
         for (int i = 0; i < 6; ++i) {
             if (CMP(t_result, t_vals[i])) {
@@ -909,12 +908,12 @@ bool raycast_obb(OBB obb, Ray3D ray, RaycastResult* out_result) {
 
     vec3 p = vec3_sub(obb.position, ray.origin);
 
-    vec3 X = {obb.orientation.m[0][0], obb.orientation.m[0][1], obb.orientation.m[0][2]};
-    vec3 Y = {obb.orientation.m[1][0], obb.orientation.m[1][1], obb.orientation.m[1][2]};
-    vec3 Z = {obb.orientation.m[2][0], obb.orientation.m[2][1], obb.orientation.m[2][2]};
+    vec3 X = vec3_make(obb.orientation.m[0][0], obb.orientation.m[0][1], obb.orientation.m[0][2]);
+    vec3 Y = vec3_make(obb.orientation.m[1][0], obb.orientation.m[1][1], obb.orientation.m[1][2]);
+    vec3 Z = vec3_make(obb.orientation.m[2][0], obb.orientation.m[2][1], obb.orientation.m[2][2]);
 
-    vec3 f = {vec3_dot(X, ray.direction), vec3_dot(Y, ray.direction), vec3_dot(Z, ray.direction)};
-    vec3 e = {vec3_dot(X, p), vec3_dot(Y, p), vec3_dot(Z, p)};
+    vec3 f = vec3_make(vec3_dot(X, ray.direction), vec3_dot(Y, ray.direction), vec3_dot(Z, ray.direction));
+    vec3 e = vec3_make(vec3_dot(X, p), vec3_dot(Y, p), vec3_dot(Z, p));
 
     float t[6] = {0, 0, 0, 0, 0, 0};
     for (int i = 0; i < 3; ++i) {
@@ -994,7 +993,7 @@ vec3 barycentric_optimized(Point3D p, Triangle t) {
     float denom = d00 * d11 - d01 * d01;
 
     if (CMP(denom, 0.0f)) {
-        return (vec3){0, 0, 0};
+        return (vec3){{{0, 0, 0}}};
     }
 
     vec3 result;
@@ -1033,7 +1032,7 @@ vec3 barycentric(Point3D p, Triangle t) {
     v = vec3_sub(ca, vec3_project(ca, ab));
     float c_coord = 1.0f - (vec3_dot(v, cp) / vec3_dot(v, ca));
 
-    return (vec3){a_coord, b_coord, c_coord};
+    return vec3_make(a_coord, b_coord, c_coord);
 }
 
 bool raycast_triangle(Triangle triangle, Ray3D ray, RaycastResult* out_result) {
@@ -1206,12 +1205,15 @@ void bvhnode_split(BVHNode* node, const Mesh* mesh, int depth) {
             vec3 c = node->bounds.position;
             vec3 e = vec3_scale(node->bounds.size, 0.5f);
 
-            vec3 offsets[8] = {
-                {-e.x, +e.y, -e.z}, {+e.x, +e.y, -e.z},
-                {-e.x, +e.y, +e.z}, {+e.x, +e.y, +e.z},
-                {-e.x, -e.y, -e.z}, {+e.x, -e.y, -e.z},
-                {-e.x, -e.y, +e.z}, {+e.x, -e.y, +e.z}
-            };
+            vec3 offsets[8];
+            offsets[0] = vec3_make(-e.x, +e.y, -e.z);
+            offsets[1] = vec3_make(+e.x, +e.y, -e.z);
+            offsets[2] = vec3_make(-e.x, +e.y, +e.z);
+            offsets[3] = vec3_make(+e.x, +e.y, +e.z);
+            offsets[4] = vec3_make(-e.x, -e.y, -e.z);
+            offsets[5] = vec3_make(+e.x, -e.y, -e.z);
+            offsets[6] = vec3_make(-e.x, -e.y, +e.z);
+            offsets[7] = vec3_make(+e.x, -e.y, +e.z);
 
             for (int i = 0; i < 8; ++i) {
                 node->children[i] = bvhnode_default();
@@ -1586,7 +1588,7 @@ AABB model_get_bounds(const Model* model) {
 }
 
 mat4 model_get_world_matrix(const Model* model) {
-    mat4 translation = mat4_translate_vec3(model->position);
+    mat4 translation = mat4_translation_vec3(model->position);
     mat4 rotation = Rotation(model->rotation.x, model->rotation.y, model->rotation.z);
     mat4 local_mat = mat4_mul(rotation, translation);
 
@@ -1716,13 +1718,13 @@ bool model_triangle(const Model* model, Triangle triangle) {
  ******************************************************************************/
 
 Point3D plane_intersection(Plane p1, Plane p2, Plane p3) {
-    mat3 D = {{
-        {p1.normal.x, p2.normal.x, p3.normal.x},
-        {p1.normal.y, p2.normal.y, p3.normal.y},
-        {p1.normal.z, p2.normal.z, p3.normal.z}
-    }};
+    mat3 D = mat3_make(
+        p1.normal.x, p2.normal.x, p3.normal.x,
+        p1.normal.y, p2.normal.y, p3.normal.y,
+        p1.normal.z, p2.normal.z, p3.normal.z
+    );
 
-    vec3 A = {-p1.distance, -p2.distance, -p3.distance};
+    vec3 A = vec3_make(-p1.distance, -p2.distance, -p3.distance);
 
     mat3 Dx = D, Dy = D, Dz = D;
     Dx.m[0][0] = A.x; Dx.m[0][1] = A.y; Dx.m[0][2] = A.z;
@@ -1732,14 +1734,14 @@ Point3D plane_intersection(Plane p1, Plane p2, Plane p3) {
     float det_d = mat3_determinant(D);
 
     if (CMP(det_d, 0.0f)) {
-        return (Point3D){0, 0, 0};
+        return vec3_make(0, 0, 0);
     }
 
     float det_dx = mat3_determinant(Dx);
     float det_dy = mat3_determinant(Dy);
     float det_dz = mat3_determinant(Dz);
 
-    return (Point3D){det_dx / det_d, det_dy / det_d, det_dz / det_d};
+    return vec3_make(det_dx / det_d, det_dy / det_d, det_dz / det_d);
 }
 
 void frustum_get_corners(Frustum f, vec3* out_corners) {
@@ -1895,13 +1897,13 @@ vec3 unproject(vec3 viewport_point, vec2 viewport_origin, vec2 viewport_size,
         world_space[2] /= world_space[3];
     }
 
-    return (vec3){world_space[0], world_space[1], world_space[2]};
+    return vec3_make(world_space[0], world_space[1], world_space[2]);
 }
 
 Ray3D get_pick_ray(vec2 viewport_point, vec2 viewport_origin, vec2 viewport_size,
                    mat4 view, mat4 projection) {
-    vec3 near_point = {viewport_point.x, viewport_point.y, 0.0f};
-    vec3 far_point = {viewport_point.x, viewport_point.y, 1.0f};
+    vec3 near_point = vec3_make(viewport_point.x, viewport_point.y, 0.0f);
+    vec3 far_point = vec3_make(viewport_point.x, viewport_point.y, 1.0f);
 
     vec3 p_near = unproject(near_point, viewport_origin, viewport_size, view, projection);
     vec3 p_far = unproject(far_point, viewport_origin, viewport_size, view, projection);
@@ -1919,11 +1921,10 @@ Ray3D get_pick_ray(vec2 viewport_point, vec2 viewport_origin, vec2 viewport_size
 void obb_get_vertices(OBB obb, vec3* out_vertices) {
     vec3 C = obb.position;
     vec3 E = obb.size;
-    vec3 A[3] = {
-        {obb.orientation.m[0][0], obb.orientation.m[0][1], obb.orientation.m[0][2]},
-        {obb.orientation.m[1][0], obb.orientation.m[1][1], obb.orientation.m[1][2]},
-        {obb.orientation.m[2][0], obb.orientation.m[2][1], obb.orientation.m[2][2]}
-    };
+    vec3 A[3];
+    A[0] = vec3_make(obb.orientation.m[0][0], obb.orientation.m[0][1], obb.orientation.m[0][2]);
+    A[1] = vec3_make(obb.orientation.m[1][0], obb.orientation.m[1][1], obb.orientation.m[1][2]);
+    A[2] = vec3_make(obb.orientation.m[2][0], obb.orientation.m[2][1], obb.orientation.m[2][2]);
 
     out_vertices[0] = vec3_add(vec3_add(vec3_add(C, vec3_scale(A[0], E.v[0])), vec3_scale(A[1], E.v[1])), vec3_scale(A[2], E.v[2]));
     out_vertices[1] = vec3_add(vec3_add(vec3_sub(C, vec3_scale(A[0], E.v[0])), vec3_scale(A[1], E.v[1])), vec3_scale(A[2], E.v[2]));
@@ -1952,11 +1953,10 @@ void obb_get_edges(OBB obb, Line3D* out_edges) {
 void obb_get_planes(OBB obb, Plane* out_planes) {
     vec3 c = obb.position;
     vec3 e = obb.size;
-    vec3 a[3] = {
-        {obb.orientation.m[0][0], obb.orientation.m[0][1], obb.orientation.m[0][2]},
-        {obb.orientation.m[1][0], obb.orientation.m[1][1], obb.orientation.m[1][2]},
-        {obb.orientation.m[2][0], obb.orientation.m[2][1], obb.orientation.m[2][2]}
-    };
+    vec3 a[3];
+    a[0] = vec3_make(obb.orientation.m[0][0], obb.orientation.m[0][1], obb.orientation.m[0][2]);
+    a[1] = vec3_make(obb.orientation.m[1][0], obb.orientation.m[1][1], obb.orientation.m[1][2]);
+    a[2] = vec3_make(obb.orientation.m[2][0], obb.orientation.m[2][1], obb.orientation.m[2][2]);
 
     out_planes[0] = plane_create(a[0], vec3_dot(a[0], vec3_add(c, vec3_scale(a[0], e.x))));
     out_planes[1] = plane_create(vec3_scale(a[0], -1.0f), -vec3_dot(a[0], vec3_sub(c, vec3_scale(a[0], e.x))));
@@ -2101,14 +2101,13 @@ CollisionManifold find_collision_features_obb_obb(OBB A, OBB B) {
         return result;
     }
 
-    vec3 test[15] = {
-        {A.orientation.m[0][0], A.orientation.m[0][1], A.orientation.m[0][2]},
-        {A.orientation.m[1][0], A.orientation.m[1][1], A.orientation.m[1][2]},
-        {A.orientation.m[2][0], A.orientation.m[2][1], A.orientation.m[2][2]},
-        {B.orientation.m[0][0], B.orientation.m[0][1], B.orientation.m[0][2]},
-        {B.orientation.m[1][0], B.orientation.m[1][1], B.orientation.m[1][2]},
-        {B.orientation.m[2][0], B.orientation.m[2][1], B.orientation.m[2][2]}
-    };
+    vec3 test[15];
+    test[0] = vec3_make(A.orientation.m[0][0], A.orientation.m[0][1], A.orientation.m[0][2]);
+    test[1] = vec3_make(A.orientation.m[1][0], A.orientation.m[1][1], A.orientation.m[1][2]);
+    test[2] = vec3_make(A.orientation.m[2][0], A.orientation.m[2][1], A.orientation.m[2][2]);
+    test[3] = vec3_make(B.orientation.m[0][0], B.orientation.m[0][1], B.orientation.m[0][2]);
+    test[4] = vec3_make(B.orientation.m[1][0], B.orientation.m[1][1], B.orientation.m[1][2]);
+    test[5] = vec3_make(B.orientation.m[2][0], B.orientation.m[2][1], B.orientation.m[2][2]);
 
     for (int i = 0; i < 3; ++i) {
         test[6 + i * 3 + 0] = vec3_cross(test[i], test[3]);

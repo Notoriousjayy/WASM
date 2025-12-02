@@ -1,6 +1,7 @@
 /* vectors.c – C23 implementation */
 
 #include "vectors.h"
+#include "compare.h"   /* single source for CMP / float comparisons */
 
 #include <math.h>
 #include <float.h>
@@ -10,13 +11,8 @@
 #include <stdio.h>
 #endif
 
-/* Optional sanity tests hook:
-   If DO_SANITY_TESTS is defined and Compare.h defines CMP(x,y),
-   that macro will be used. Otherwise we fall back to a default
-   epsilon-based float comparison. */
-#ifdef DO_SANITY_TESTS
-#include "Compare.h"
-#endif
+/* Remove the whole DO_SANITY_TESTS block and the #ifndef CMP / cmp_float code */
+
 
 #ifndef CMP
 static inline bool cmp_float(float x, float y) {

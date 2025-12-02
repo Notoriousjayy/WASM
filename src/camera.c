@@ -1,10 +1,5 @@
-/**
- * camera.c - Camera System Implementation (C23)
- * 
- * Translated from C++ to C23
- */
-
 #include "camera.h"
+#include "compare.h"   /* CMP comes from here */
 
 #include <math.h>
 #include <float.h>
@@ -22,11 +17,11 @@
     #define RAD2DEG(rad) ((rad) * 57.2957795130823f)    /* rad * (180 / PI) */
 #endif
 
-#define CMP(x, y) \
-    (fabsf((x) - (y)) <= FLT_EPSILON * fmaxf(1.0f, fmaxf(fabsf(x), fabsf(y))))
+/* Remove the local #define CMP(...) */
 
 #define CLAMP(val, min_val, max_val) \
     (((val) < (min_val)) ? (min_val) : (((val) > (max_val)) ? (max_val) : (val)))
+
 
 /*******************************************************************************
  * Camera Initialization
@@ -131,9 +126,9 @@ bool camera_is_perspective(const Camera* self) {
 
 bool camera_is_orthonormal(const Camera* self) {
     /* Extract the 3x3 rotation portion of the world matrix */
-    vec3 right   = { self->world_matrix.m[0][0], self->world_matrix.m[0][1], self->world_matrix.m[0][2] };
-    vec3 up      = { self->world_matrix.m[1][0], self->world_matrix.m[1][1], self->world_matrix.m[1][2] };
-    vec3 forward = { self->world_matrix.m[2][0], self->world_matrix.m[2][1], self->world_matrix.m[2][2] };
+    vec3 right   = {{{ self->world_matrix.m[0][0], self->world_matrix.m[0][1], self->world_matrix.m[0][2] }}};
+    vec3 up      = {{{ self->world_matrix.m[1][0], self->world_matrix.m[1][1], self->world_matrix.m[1][2] }}};
+    vec3 forward = {{{ self->world_matrix.m[2][0], self->world_matrix.m[2][1], self->world_matrix.m[2][2] }}};
 
     /* Check if each axis is unit length */
     if (!CMP(vec3_magnitude_sq(right), 1.0f)) return false;
@@ -150,9 +145,9 @@ bool camera_is_orthonormal(const Camera* self) {
 
 void camera_orthonormalize(Camera* self) {
     /* Extract axes from world matrix */
-    vec3 right   = { self->world_matrix.m[0][0], self->world_matrix.m[0][1], self->world_matrix.m[0][2] };
-    vec3 up      = { self->world_matrix.m[1][0], self->world_matrix.m[1][1], self->world_matrix.m[1][2] };
-    vec3 forward = { self->world_matrix.m[2][0], self->world_matrix.m[2][1], self->world_matrix.m[2][2] };
+    vec3 right   = {{{ self->world_matrix.m[0][0], self->world_matrix.m[0][1], self->world_matrix.m[0][2] }}};
+    vec3 up      = {{{ self->world_matrix.m[1][0], self->world_matrix.m[1][1], self->world_matrix.m[1][2] }}};
+    vec3 forward = {{{ self->world_matrix.m[2][0], self->world_matrix.m[2][1], self->world_matrix.m[2][2] }}};
 
     /* Gram-Schmidt orthonormalization */
     forward = vec3_normalized(forward);
@@ -291,36 +286,36 @@ Frustum camera_get_frustum(Camera* self) {
  ******************************************************************************/
 
 vec3 camera_get_position(const Camera* self) {
-    return (vec3){
+    return (vec3){{{
         self->world_matrix.m[3][0],
         self->world_matrix.m[3][1],
         self->world_matrix.m[3][2]
-    };
+    }}};
 }
 
 vec3 camera_get_forward(const Camera* self) {
     /* Forward is the negative Z axis in OpenGL convention */
-    return (vec3){
+    return (vec3){{{
         -self->world_matrix.m[2][0],
         -self->world_matrix.m[2][1],
         -self->world_matrix.m[2][2]
-    };
+    }}};
 }
 
 vec3 camera_get_right(const Camera* self) {
-    return (vec3){
+    return (vec3){{{
         self->world_matrix.m[0][0],
         self->world_matrix.m[0][1],
         self->world_matrix.m[0][2]
-    };
+    }}};
 }
 
 vec3 camera_get_up(const Camera* self) {
-    return (vec3){
+    return (vec3){{{
         self->world_matrix.m[1][0],
         self->world_matrix.m[1][1],
         self->world_matrix.m[1][2]
-    };
+    }}};
 }
 
 void camera_set_position(Camera* self, vec3 position) {
@@ -366,14 +361,14 @@ void camera_look_at(Camera* self, vec3 target, vec3 up) {
 OrbitCamera orbit_camera_create(void) {
     OrbitCamera orbit = {
         .base = camera_create(),
-        .target = {0.0f, 0.0f, 0.0f},
-        .pan_speed = {180.0f, 180.0f},
+        .target = {{{0.0f, 0.0f, 0.0f}}},
+        .pan_speed = {{{180.0f, 180.0f}}},
         .zoom_distance = 10.0f,
-        .zoom_distance_limit = {3.0f, 80.0f},
+        .zoom_distance_limit = {{{3.0f, 80.0f}}},
         .zoom_speed = 300.0f,
-        .rotation_speed = {250.0f, 120.0f},
-        .y_rotation_limit = {-20.0f, 80.0f},
-        .current_rotation = {0.0f, 0.0f}
+        .rotation_speed = {{{250.0f, 120.0f}}},
+        .y_rotation_limit = {{{-20.0f, 80.0f}}},
+        .current_rotation = {{{0.0f, 0.0f}}}
     };
 
     /* Initial update to position the camera */
@@ -465,7 +460,7 @@ void orbit_camera_update(OrbitCamera* self, float delta_time) {
     camera_set_position(&self->base, position);
 
     /* Look at target */
-    camera_look_at(&self->base, self->target, (vec3){0.0f, 1.0f, 0.0f});
+    camera_look_at(&self->base, self->target, (vec3){{{0.0f, 1.0f, 0.0f}}});
 }
 
 /*******************************************************************************

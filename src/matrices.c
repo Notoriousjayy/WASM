@@ -1,4 +1,5 @@
 #include "matrices.h"
+#include "compare.h"   /* use global CMP / float compare utilities */
 
 #include <math.h>
 #include <float.h>
@@ -11,6 +12,9 @@ float Magnitude(vec3 v);
 float MagnitudeSq(vec3 v);
 vec3  Normalized(vec3 v);
 float DEG2RAD(float degrees);
+
+/* Remove the #ifndef CMP / #define CMP block entirely */
+
 
 #ifndef CMP
 #define CMP(x, y) \
