@@ -1,10 +1,3 @@
-/**
- * geometry3d.h - 3D Geometry Primitives and Collision Detection (C23)
- * 
- * Translated from C++ to C23
- * Original: Geometry3D.h/.cpp
- */
-
 #ifndef GEOMETRY3D_H
 #define GEOMETRY3D_H
 
