@@ -538,3 +538,13 @@ float MagnitudeSq(vec3 v) {
 vec3 Normalized(vec3 v) {
     return vec3_normalized(v);
 }
+
+/* Convenience scaling wrappers used by geometry code */
+
+vec2 vec2_scale(vec2 v, float scalar) {
+    return vec2_mul_scalar(v, scalar);
+}
+
+vec3 vec3_scale(vec3 v, float scalar) {
+    return vec3_mul_scalar(v, scalar);
+}

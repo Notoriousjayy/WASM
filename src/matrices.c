@@ -941,3 +941,13 @@ vec3 Decompose(mat3 rot1) {
 
     return (vec3){ x, y, z };
 }
+
+
+mat4 mat4_perspective(float fov, float aspect, float zNear, float zFar) {
+    return Projection(fov, aspect, zNear, zFar);
+}
+
+
+mat4 mat4_ortho(float left, float right, float bottom, float top, float zNear, float zFar) {
+    return Ortho(left, right, bottom, top, zNear, zFar);
+}

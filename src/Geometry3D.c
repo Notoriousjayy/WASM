@@ -5,7 +5,7 @@
  * Original: Geometry3D.cpp
  */
 
-#include "geometry3d.h"
+#include "geometry3D.h"
 
 #include <math.h>
 #include <float.h>
@@ -754,7 +754,7 @@ bool triangle_plane(Triangle t, Plane p) {
     float side2 = plane_equation(t.b, p);
     float side3 = plane_equation(t.c, p);
 
-    if (CMP(side1, 0) && CMP(side2, 0) && CMP(side3, 0)) {
+    if (CMP(side1, 0.0f) && CMP(side2, 0.0f) && CMP(side3, 0.0f)) {
         return true;
     }
     if (side1 > 0 && side2 > 0 && side3 > 0) {
@@ -771,13 +771,13 @@ vec3 sat_cross_edge(vec3 a, vec3 b, vec3 c, vec3 d) {
     vec3 cd = vec3_sub(d, c);
 
     vec3 result = vec3_cross(ab, cd);
-    if (!CMP(vec3_magnitude_sq(result), 0)) {
+    if (!CMP(vec3_magnitude_sq(result), 0.0f)) {
         return result;
     }
 
     vec3 axis = vec3_cross(ab, vec3_sub(c, a));
     result = vec3_cross(ab, axis);
-    if (!CMP(vec3_magnitude_sq(result), 0)) {
+    if (!CMP(vec3_magnitude_sq(result), 0.0f)) {
         return result;
     }
 
@@ -826,7 +826,7 @@ bool triangle_triangle_robust(Triangle t1, Triangle t2) {
 
     for (int i = 0; i < 11; ++i) {
         if (!overlap_on_axis_triangle_triangle(t1, t2, axes[i])) {
-            if (!CMP(vec3_magnitude_sq(axes[i]), 0)) {
+            if (!CMP(vec3_magnitude_sq(axes[i]), 0.0f)) {
                 return false;
             }
         }
@@ -918,7 +918,7 @@ bool raycast_obb(OBB obb, Ray3D ray, RaycastResult* out_result) {
 
     float t[6] = {0, 0, 0, 0, 0, 0};
     for (int i = 0; i < 3; ++i) {
-        if (CMP(f.v[i], 0)) {
+        if (CMP(f.v[i], 0.0f)) {
             if (-e.v[i] - obb.size.v[i] > 0 || -e.v[i] + obb.size.v[i] < 0) {
                 return false;
             }
@@ -1079,7 +1079,7 @@ bool linetest_plane(Plane plane, Line3D line) {
     float n_a = vec3_dot(plane.normal, line.start);
     float n_ab = vec3_dot(plane.normal, ab);
 
-    if (CMP(n_ab, 0)) {
+    if (CMP(n_ab, 0.0f)) {
         return false;
     }
 
@@ -1586,8 +1586,8 @@ AABB model_get_bounds(const Model* model) {
 }
 
 mat4 model_get_world_matrix(const Model* model) {
-    mat4 translation = mat4_translation(model->position);
-    mat4 rotation = mat4_rotation(model->rotation.x, model->rotation.y, model->rotation.z);
+    mat4 translation = mat4_translate_vec3(model->position);
+    mat4 rotation = Rotation(model->rotation.x, model->rotation.y, model->rotation.z);
     mat4 local_mat = mat4_mul(rotation, translation);
 
     mat4 parent_mat = mat4_identity();
@@ -1604,7 +1604,7 @@ OBB model_get_obb(const Model* model) {
     OBB obb;
 
     obb.size = aabb.size;
-    obb.position = mat4_multiply_point(world, aabb.position);
+    obb.position = MultiplyPoint(aabb.position, world);
     obb.orientation = mat4_cut(world, 3, 3);
 
     return obb;
@@ -1615,8 +1615,8 @@ float model_ray(const Model* model, Ray3D ray) {
     mat4 inv = mat4_inverse(world);
 
     Ray3D local;
-    local.origin = mat4_multiply_point(inv, ray.origin);
-    local.direction = mat4_multiply_vector(inv, ray.direction);
+    local.origin = MultiplyPoint(ray.origin, inv);
+    local.direction = mat4_multiply_vector(ray.direction, inv);
     ray3d_normalize_direction(&local);
 
     if (model->content != NULL) {
@@ -1630,8 +1630,8 @@ bool linetest_model(const Model* model, Line3D line) {
     mat4 inv = mat4_inverse(world);
 
     Line3D local;
-    local.start = mat4_multiply_point(inv, line.start);
-    local.end = mat4_multiply_point(inv, line.end);
+    local.start = MultiplyPoint(line.start, inv);
+    local.end = MultiplyPoint(line.end, inv);
 
     if (model->content != NULL) {
         return linetest_mesh(model->content, local);
@@ -1644,7 +1644,7 @@ bool model_sphere(const Model* model, Sphere sphere) {
     mat4 inv = mat4_inverse(world);
 
     Sphere local;
-    local.position = mat4_multiply_point(inv, sphere.position);
+    local.position = MultiplyPoint(sphere.position, inv);
     local.radius = sphere.radius;
 
     if (model->content != NULL) {
@@ -1659,7 +1659,7 @@ bool model_aabb(const Model* model, AABB aabb) {
 
     OBB local;
     local.size = aabb.size;
-    local.position = mat4_multiply_point(inv, aabb.position);
+    local.position = MultiplyPoint(aabb.position, inv);
     local.orientation = mat4_cut(inv, 3, 3);
 
     if (model->content != NULL) {
@@ -1674,7 +1674,7 @@ bool model_obb(const Model* model, OBB obb) {
 
     OBB local;
     local.size = obb.size;
-    local.position = mat4_multiply_point(inv, obb.position);
+    local.position = MultiplyPoint(obb.position, inv);
     local.orientation = mat3_mul(obb.orientation, mat4_cut(inv, 3, 3));
 
     if (model->content != NULL) {
@@ -1688,7 +1688,7 @@ bool model_plane(const Model* model, Plane plane) {
     mat4 inv = mat4_inverse(world);
 
     Plane local;
-    local.normal = mat4_multiply_vector(inv, plane.normal);
+    local.normal = mat4_multiply_vector(plane.normal, inv);
     local.distance = plane.distance;
 
     if (model->content != NULL) {
@@ -1702,9 +1702,9 @@ bool model_triangle(const Model* model, Triangle triangle) {
     mat4 inv = mat4_inverse(world);
 
     Triangle local;
-    local.a = mat4_multiply_point(inv, triangle.a);
-    local.b = mat4_multiply_point(inv, triangle.b);
-    local.c = mat4_multiply_point(inv, triangle.c);
+    local.a = MultiplyPoint(triangle.a, inv);
+    local.b = MultiplyPoint(triangle.b, inv);
+    local.c = MultiplyPoint(triangle.c, inv);
 
     if (model->content != NULL) {
         return mesh_triangle(model->content, local);
@@ -1731,7 +1731,7 @@ Point3D plane_intersection(Plane p1, Plane p2, Plane p3) {
 
     float det_d = mat3_determinant(D);
 
-    if (CMP(det_d, 0)) {
+    if (CMP(det_d, 0.0f)) {
         return (Point3D){0, 0, 0};
     }
 
@@ -1770,7 +1770,7 @@ float classify_aabb(AABB aabb, Plane plane) {
 }
 
 float classify_obb(OBB obb, Plane plane) {
-    vec3 normal = mat3_multiply_vector(obb.orientation, plane.normal);
+    vec3 normal = mat3_multiply_vector(plane.normal, obb.orientation);
 
     float r = fabsf(obb.size.x * normal.x) +
               fabsf(obb.size.y * normal.y) +
@@ -1834,6 +1834,29 @@ bool frustum_intersects_obb(Frustum f, OBB obb) {
 /*******************************************************************************
  * Unprojection / Picking
  ******************************************************************************/
+
+static void mat4_multiply_array(
+    float *out,
+    const float *in,
+    int rows_a,
+    int cols_a,
+    const float *mat_b,
+    int rows_b,
+    int cols_b)
+{
+    (void)rows_b;
+    // Multiply a row-major (rows_a x cols_a) array by a row-major
+    // (rows_b x cols_b) matrix: out = in * mat_b.
+    for (int r = 0; r < rows_a; ++r) {
+        for (int c = 0; c < cols_b; ++c) {
+            float sum = 0.0f;
+            for (int k = 0; k < cols_a; ++k) {
+                sum += in[r * cols_a + k] * mat_b[k * cols_b + c];
+            }
+            out[r * cols_b + c] = sum;
+        }
+    }
+}
 
 vec3 unproject(vec3 viewport_point, vec2 viewport_origin, vec2 viewport_size,
                mat4 view, mat4 projection) {
@@ -1949,7 +1972,7 @@ bool clip_to_plane(Plane plane, Line3D line, Point3D* out_point) {
     float n_a = vec3_dot(plane.normal, line.start);
     float n_ab = vec3_dot(plane.normal, ab);
 
-    if (CMP(n_ab, 0)) {
+    if (CMP(n_ab, 0.0f)) {
         return false;
     }
 
