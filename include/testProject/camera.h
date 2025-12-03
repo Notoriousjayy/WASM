@@ -8,7 +8,8 @@
 #define CAMERA_H
 
 #include "matrices.h"
-#include "geometry3D.h"
+#include "Geometry3D/geom3d_types.h"
+#include "Geometry3D/geom3d_frustum.h"
 
 #include <stdbool.h>
 
